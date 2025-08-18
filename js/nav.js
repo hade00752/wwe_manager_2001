@@ -1,7 +1,7 @@
 // public/js/nav.js
 // Global sticky nav with active-tab highlight + sim date pill.
 
-import { loadState, ensureInitialised, simDateString } from "./js/engine.js";
+import { loadState, ensureInitialised, simDateString } from "./engine.js";
 
 (function injectNavStyles(){
   if (document.getElementById('global-nav-styles')) return;
