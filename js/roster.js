@@ -49,7 +49,7 @@ function brandPill(brand){
 }
 
 // Use pretty URL always; server serves /profile for the profile page
-const PROFILE_PATH = '/profile';
+const PROFILE_PATH = "profile.html";
 
 function rowFor(w){
   const r = el('div', { class:'ro-row' });
