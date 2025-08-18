@@ -39,3 +39,4 @@ export {
 // Optional convenience (keep if you want one import path for snapshots):
 export { snapshotWeekBaselineOnce } from './engine/snapshots.js';
 
+export { nsKey } from './engine/state_mgmt.js';
