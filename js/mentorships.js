@@ -1,8 +1,8 @@
 // public/js/mentorships_ui.js
 // Mentorships screen (UI layer). Renders slots, handles selects, previews.
 
-import { el } from "./js/util.js";
-import { loadState, ensureInitialised, saveState, headshotImg } from "./js/engine.js";
+import { el } from "./util.js";
+import { loadState, ensureInitialised, saveState, headshotImg } from "./engine.js";
 import { previewMentorEffects, compatibilityPreview } from './engine/mentorships.js';
 
 // ---------- tiny styles for chips & note ----------

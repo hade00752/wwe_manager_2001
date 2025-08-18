@@ -1,8 +1,8 @@
 // public/js/booking.js
-import { RAW, SD, SEGMENTS, TITLE_ALLOWED_ON, el } from "./js/util.js";
-import { newSeason, loadState, saveState, ensureInitialised, availableByBrand, byBrand } from "./js/engine.js";
-import { TITLES } from "./js/data.js";
-import { headshotImg } from "./js/engine.js";
+import { RAW, SD, SEGMENTS, TITLE_ALLOWED_ON, el } from "./util.js";
+import { newSeason, loadState, saveState, ensureInitialised, availableByBrand, byBrand } from "./engine.js";
+import { TITLES } from "./data.js";
+import { headshotImg } from "./engine.js";
 
 const root = document.getElementById('booking-root') || (function(){
   const m = document.createElement('main'); m.id = 'booking-root'; document.body.appendChild(m); return m;
