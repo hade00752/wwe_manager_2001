@@ -57,8 +57,9 @@ function ageFromBirthdayAt(bday, refDate){
   const d = parseDDMMYYYY(bday);
   if(!d || !(refDate instanceof Date)) return null;
   let age = refDate.getFullYear() - d.getFullYear();
-  const preBirthday = (refDate.getMonth() < d.getMonth()) 
-                      (refDate.getMonth() === d.getMonth() && refDate.getDate() < d.getDate());
+  const preBirthday =
+    (refDate.getMonth() < d.getMonth()) ||
+    (refDate.getMonth() === d.getMonth() && refDate.getDate() < d.getDate());
   if(preBirthday) age -= 1;
   return age;
 }
@@ -124,7 +125,7 @@ function snapshotOf(w){
 function loadPrevSnapshot(name){
   try { return JSON.parse(localStorage.getItem(nsKey(`attr::${name}`)) || 'null'); } catch { return null; }
 }
-// legacy fallback (older builds saved this way)
+// legacy fallback
 function loadPrevSnapshotLegacy(name){
   try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::${name}`) || 'null'); } catch { return null; }
 }
@@ -285,7 +286,7 @@ function init(){
     || loadPrevSnapshotLegacy(w.name); // legacy fallback
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
 
-  // Ring Safety extra delta (shown under Risk)
+  // Ring Safety extra delta (shown under Risk) if present in baseline
   const deltas = { ...baseDeltas };
   if (baseline?.values && typeof baseline.values.ringSafety === 'number') {
     const rsNow = Number(w.ringSafety ?? 0);
@@ -339,11 +340,14 @@ function init(){
   // Grid
   const grid = el('div',{class:'pf-grid'});
 
-  /* LEFT: attributes + storylines */
+  /* ---------------- LEFT: attributes + storylines ---------------- */
   const left = el('div',{class:'pf-col'});
+
+  // Attributes
   const attrsCard = card('Attributes');
   const attrs = el('div',{class:'pf-attrs'});
 
+  // In-Ring
   const boxRing = el('div',{class:'pf-box'});
   boxRing.appendChild(el('div',{class:'pf-box__title',text:'In-Ring'}));
   boxRing.appendChild(statRow('Work Rate', w.workrate ?? 60, 'workrate', deltas));
@@ -353,6 +357,7 @@ function init(){
   boxRing.appendChild(statRow('Chemistry', w.chemistry ?? 60, 'chemistry', deltas));
   attrs.appendChild(boxRing);
 
+  // Profile
   const boxProf = el('div',{class:'pf-box'});
   boxProf.appendChild(el('div',{class:'pf-box__title',text:'Profile'}));
   boxProf.appendChild(statRow('Star Power', w.starpower ?? 60, 'starpower', deltas));
@@ -362,16 +367,37 @@ function init(){
   boxProf.appendChild(statRow('Momentum', w.momentum ?? 60, 'momentum', deltas));
   attrs.appendChild(boxProf);
 
+  // Physical
   const boxPhys = el('div',{class:'pf-box'});
   boxPhys.appendChild(el('div',{class:'pf-box__title',text:'Physical'}));
   boxPhys.appendChild(statRow('Stamina', w.stamina ?? 60, 'stamina', deltas));
   boxPhys.appendChild(statRow('Durability', w.durability ?? 60, 'durability', deltas));
   boxPhys.appendChild(statRow('Strength/Power', w.strengthPower ?? 60, 'strengthPower', deltas));
   boxPhys.appendChild(statRow('Agility', w.agility ?? 60, 'agility', deltas));
-  boxPhysAppend: attrs.appendChild(boxPhys);
+  boxPhys.appendChild(statRow('Athleticism', w.athleticism ?? 60, 'athleticism', deltas));
+  attrs.appendChild(boxPhys);
+
+  // Risk & Longevity
+  const riskCard = el('div',{class:'pf-box'});
+  riskCard.appendChild(el('div',{class:'pf-box__title',text:'Risk & Longevity'}));
+  const injuryRisk = (w.ringSafety ?? 70) + (w.professionalism ?? 70) + (w.durability ?? 70);
+  const riskTier = (injuryRisk >= 230) ? 'Very Low' : (injuryRisk >= 210) ? 'Low' : (injuryRisk >= 180) ? 'Moderate' : 'High';
+  riskCard.appendChild(el('div',{class:'pf-row'},
+    el('div',{class:'pf-row__l',text:'Injury Risk'}),
+    el('div',{class:'pf-row__r'}, el('span',{text:riskTier}))
+  ));
+  riskCard.appendChild(statRow('Ring Safety', w.ringSafety ?? 60, 'ringSafety', deltas));
+  riskCard.appendChild(statRow('Durability', w.durability ?? 60, 'durability', deltas));
+  riskCard.appendChild(statRow('Stamina', w.stamina ?? 60, 'stamina', deltas));
+  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Fatigue'}), el('div',{class:'pf-row__r',text:String(w.fatigue ?? 0)})));
+  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Age'}), el('div',{class:'pf-row__r',text:String(age ?? 'Unknown')})));
+  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Retirement Status'}), el('div',{class:'pf-row__r',text:retirementStatus(w, nowSim).text})));
+  attrs.appendChild(riskCard);
+
   attrsCard.appendChild(attrs);
   left.appendChild(attrsCard);
 
+  // Storylines
   const storyCard = card('Storylines');
   const hotWith = [];
   const hotKeys = Object.keys(state.hotMatches || {});
@@ -388,7 +414,7 @@ function init(){
     line.appendChild(el('div', { text: `vs ${hotWith.join(' / ')}` }));
     storyCard.appendChild(line);
   }
-  const stories = (state.storylines[w.brand]||[]).filter(s=>s.heat>0 && s.names.includes(w.name));
+  const stories = ((state.storylines||{})[w.brand]||[]).filter(s=>s.heat>0 && s.names.includes(w.name));
   if(!stories.length){
     storyCard.appendChild(el('div',{class:'pf-empty',text:'No active storylines.'}));
   }else{
@@ -403,8 +429,9 @@ function init(){
   }
   left.appendChild(storyCard);
 
-  /* RIGHT: belts / status / bio (+ Contract for FA) */
+  /* ---------------- RIGHT: belts / status / bio (+ Contract for FA) ---------------- */
   const right = el('div',{class:'pf-col'});
+
   const beltsCard = card('Belts', el('div',{text: w.championOf || 'None'}));
   right.appendChild(beltsCard);
 
@@ -422,6 +449,7 @@ function init(){
   if (w.role) statusCard.appendChild(el('div',{class:'pf-info-line',text:`Role: ${w.role}`}));
   right.appendChild(statusCard);
 
+  // Contract box for Free Agents
   if (isFreeAgent(w.brand)) {
     const contract = card('Contract');
     contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent.'}));
@@ -439,9 +467,9 @@ function init(){
     right.appendChild(contract);
   }
 
+  // Bio & Style
   const bioCard = card('Bio & Style');
   const info = el('div',{class:'pf-info-grid'});
-
   info.appendChild(el('div',{class:'pf-info-line',text:`Birthday: ${w.birthday || 'Unknown'}`}));
   info.appendChild(el('div',{class:'pf-info-line', text:`Style Tags: ${ (w.styleTags?.length? w.styleTags.join(', ') : 'None') }`}));
   bioCard.appendChild(info);
@@ -455,3 +483,4 @@ function init(){
 }
 
 try { init(); } catch(e){ bootError(e.message, e); }
+
