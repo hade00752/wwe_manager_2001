@@ -1,35 +1,62 @@
 // public/js/engine/snapshots.js
-// Save a per-wrestler baseline once per week so profiles can show deltas “since last week”.
-import { nsKey } from "./state_mgmt.js"; // or from "./engine.js" if re-exported
+import { nsKey, SAVE_KEY } from './state_mgmt.js';
 
-const ATTR_KEYS = [
-  'workrate','psychology','charisma','mic','chemistry',
-  'starpower','reputation','likeability','consistency','momentum',
-  'stamina','durability','strengthPower','agility','athleticism'
-];
-
-function makeSnapOf(w){
-  const out = {};
-  ATTR_KEYS.forEach(k => out[k] = Number(w[k] ?? 60));
-  return out;
-}
-
-// Call this ONCE at the start of each week’s simulation (before progression/mentorship changes)
-export function snapshotWeekBaseline(state){
-  const week = state.week; // baseline is “this week before changes”
-  try{
-    state.roster.forEach(w => {
-      const key = `wwf_attr_snap_v1::${w.name}`;
-      const pack = { week, values: makeSnapOf(w) };
-      localStorage.setItem(nsKey(`snap::${key}`), JSON.stringify(pack));
-    });
-  }catch{}
-}
-// === add at the bottom of snapshots.js ===
-export function snapshotWeekBaselineOnce(state) {
+/**
+ * Take one baseline snapshot of all roster attributes for the current week.
+ * Idempotent: if a baseline exists for this week, does nothing.
+ * Stores:
+ *   - state.snapshots.weekBaseline[name] = { values: { ...15 stats..., ringSafety? }, week }
+ *   - localStorage[nsKey('attr::<name>')] = { values, week, takenAt }
+ */
+export function snapshotWeekBaselineOnce(state){
+  if (!state) return;
   state.snapshots = state.snapshots || {};
-  if (state.snapshots.weekBaselineWeek === state.week) return; // already done this week
-  snapshotWeekBaseline(state);
-  state.snapshots.weekBaselineWeek = state.week;
-}
+  const wk = Number(state.week || 1);
 
+  // If we already have a baseline tagged with this week, keep it.
+  const have = state.snapshots.weekBaseline && state.snapshots.weekBaseline.__week === wk;
+  if (have) return;
+
+  const packAll = {};
+  const now = Date.now();
+
+  (state.roster || []).forEach(w => {
+    const values = {
+      workrate:        Number(w.workrate       ?? 60),
+      psychology:      Number(w.psychology     ?? 60),
+      charisma:        Number(w.charisma ?? w.promo ?? 60),
+      mic:             Number(w.mic      ?? w.promo ?? 60),
+      chemistry:       Number(w.chemistry      ?? 60),
+
+      starpower:       Number(w.starpower      ?? 60),
+      reputation:      Number(w.reputation     ?? 60),
+      likeability:     Number(w.likeability    ?? 60),
+      consistency:     Number(w.consistency    ?? 60),
+      momentum:        Number(w.momentum       ?? 60),
+
+      stamina:         Number(w.stamina        ?? 60),
+      durability:      Number(w.durability     ?? 60),
+      strengthPower:   Number(w.strengthPower  ?? 60),
+      agility:         Number(w.agility        ?? 60),
+      athleticism:     Number(w.athleticism    ?? 60),
+
+      // optional (used on profile deltas if present)
+      ringSafety:      (typeof w.ringSafety === 'number') ? Number(w.ringSafety) : undefined,
+    };
+
+    packAll[w.name] = { values, week: wk };
+
+    // Persist a per-wrestler copy under the **namespaced** key for profile.js
+    try {
+      localStorage.setItem(nsKey(`attr::${w.name}`), JSON.stringify({
+        values, week: wk, takenAt: now
+      }));
+    } catch {}
+  });
+
+  state.snapshots.weekBaseline = packAll;
+  state.snapshots.weekBaseline.__week = wk;
+
+  // write back whole state (so profile.js can read weekBaseline)
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
+}
