@@ -443,7 +443,7 @@ function init(){
   const baseline =
       (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
    || findPerMatchBaseline(state, w.name)
-   || loadPrevSnapshot(w.name)
+   || 
    || loadPrevSnapshotLegacy(w.name);
  // legacy fallback
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
