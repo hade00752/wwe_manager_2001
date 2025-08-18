@@ -582,7 +582,7 @@ function init(){
   const beltsCard = card('Belts', el('div',{text: w.championOf || 'None'}));
   right.appendChild(beltsCard);
 
-  const statusCard = card('Status'));
+  const statusCard = card('Status');
   const healthy = (w.injuryWeeks||0)===0;
   const retireInfo = retirementStatus(w, nowSim);
   statusCard.appendChild(el('div',{class:'pf-info-line'},
