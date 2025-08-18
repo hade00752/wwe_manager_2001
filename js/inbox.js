@@ -1,10 +1,10 @@
 // public/js/inbox.js
 // Inbox UI (renders messages and lets the user choose outcomes)
 
-import { el, clamp } from './util.js';
-import { loadState, ensureInitialised, saveState } from './engine.js';
-import { RAW, SD } from './util.js';
-import { headshotImg } from './engine.js';
+import { el, clamp } from "./js/util.js";
+import { loadState, ensureInitialised, saveState } from "./js/engine.js";
+import { RAW, SD } from "./js/util.js";
+import { headshotImg } from "./js/engine.js";
 
 const root = getRoot();
 init();

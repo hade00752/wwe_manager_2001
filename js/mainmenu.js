@@ -1,6 +1,6 @@
 // Main Menu: start RAW/SmackDown or continue
-import { el, RAW, SD } from './util.js';
-import { loadState, saveState, ensureInitialised, newSeason } from './engine.js';
+import { el, RAW, SD } from "./js/util.js";
+import { loadState, saveState, ensureInitialised, newSeason } from "./js/engine.js";
 
 (function styles(){
   const s = document.createElement('style');

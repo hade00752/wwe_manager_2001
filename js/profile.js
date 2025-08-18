@@ -1,8 +1,8 @@
 // public/js/profile.js
 // FM-style wrestler profile with streamlined attributes (15-stat model + birthday/age + color scale & delta arrows)
 
-import { el, clamp, RAW, SD } from './util.js';
-import { loadState, ensureInitialised, headshotImg, saveState } from './engine.js';
+import { el, clamp, RAW, SD } from "./js/util.js";
+import { loadState, ensureInitialised, headshotImg, saveState } from "./js/engine.js";
 
 /* ---------- never fail silently ---------- */
 function bootError(msg, err){
