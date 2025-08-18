@@ -441,6 +441,8 @@ function init(){
 
   const bioCard = card('Bio & Style');
   const info = el('div',{class:'pf-info-grid'});
+  const baseline = (typeof weekBaseline !== "undefined" ? weekBaseline : 50);
+
   info.appendChild(el('div',{class:'pf-info-line',text:`Birthday: ${w.birthday || 'Unknown'}`}));
   info.appendChild(el('div',{class:'pf-info-line', text:`Style Tags: ${ (w.styleTags?.length? w.styleTags.join(', ') : 'None') }`}));
   bioCard.appendChild(info);
