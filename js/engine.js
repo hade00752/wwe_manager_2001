@@ -1,7 +1,6 @@
-/* public/js/engine.js — safe barrel */
+/* public/js/engine.js — barrel */
 export * from './engine/state_mgmt.js';     // simNow, simDateString, advanceSimWeek, nsKey, etc.
 export * from './engine/helpers.js';        // headshotImg, byBrand, etc.
-
 export { aiBooking } from './engine/ai.js';
 export { runShow } from './engine/runShow.js';
 export { applyWeeklyProgression } from './engine/progression.js';
