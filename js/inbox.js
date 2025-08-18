@@ -76,7 +76,7 @@ function render(state){
     const label = el('span',{text:'From:'});
     label.style.opacity = '.75';
 
-    const link = el('a', { href:`/profile?name=${encodeURIComponent(who)}`, text: who });
+    const link = el('a', { href:`profile.html?name=${encodeURIComponent(who)}`, text: who });
     link.style.textDecoration = 'none';
 
     fromRow.appendChild(ava);
@@ -212,7 +212,7 @@ function nameChip(n, cls=''){
   img.onerror = () => { img.replaceWith(pill(initials(n))); };
   c.appendChild(img);
 
-  const a = el('a',{href:`/profile?name=${encodeURIComponent(n)}`, text:n});
+  const a = el('a',{href:`profile.html?name=${encodeURIComponent(n)}`, text:n});
   c.appendChild(a);
   return c;
 }
@@ -239,7 +239,7 @@ function renderBodyWithRosterLinks(text, state){
       const safe = name.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const re = new RegExp(`${boundary}(${safe})${tail}`, 'g');
       html = html.replace(re, (_, pre, cap, post) => {
-        const url = `/profile?name=${encodeURIComponent(cap)}`;
+        const url = `profile.html?name=${encodeURIComponent(cap)}`;
         return `${pre}<a href="${url}">${cap}</a>${post}`;
       });
     }
