@@ -166,6 +166,21 @@ function snapshotOf(w){
 }
 // legacy localStorage fallback (pre-snapshots.js)
 function loadPrevSnapshotLegacy(name){
+function findPerMatchBaseline(state, name){
+  try{
+   const matches = state.matches || {}; 
+    let found = null, latestWeek = -1; 
+    for (const rec of Object.values(matches)){ 
+      const base = rec?.baseline?.[name]?.values; 
+      if (base){ 
+        const wk = Number(rec.week ?? 0); 
+        if (wk >= latestWeek){ found = base; latestWeek = wk; } 
+      } 
+    } 
+    return found ? { values: found } : null; 
+  }catch{ return null; } 
+}
+
   try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::${name}`) || 'null'); } catch { return null; }
 }
 function computeDeltas(curr, prev){
