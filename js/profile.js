@@ -1,3 +1,4 @@
+function findPerMatchBaseline(){ return null; }
 // public/js/profile.js
 // FM-style wrestler profile with streamlined attributes (15-stat model + birthday/age + color scale & delta arrows)
 
