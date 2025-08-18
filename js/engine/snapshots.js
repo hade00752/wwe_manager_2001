@@ -60,3 +60,25 @@ export function snapshotWeekBaselineOnce(state){
   // write back whole state (so profile.js can read weekBaseline)
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
 }
+
+// --- Provide a simple lookup helper for profile.js ---
+export function findPerMatchBaseline(name){
+  if (!name) return null;
+
+  // Try the localStorage snapshot first
+  try {
+    const raw = localStorage.getItem(nsKey(`attr::${name}`));
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  // Fallback: check weekBaseline in save
+  try {
+    const state = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (state && state.snapshots && state.snapshots.weekBaseline) {
+      return state.snapshots.weekBaseline[name] || null;
+    }
+  } catch {}
+
+  return null;
+}
+
