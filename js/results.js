@@ -1,12 +1,12 @@
 // public/js/results.js
-import { el } from './util.js';
+import { el } from "./js/util.js";
 import {
   loadState, saveState, ensureInitialised,
   runShow, aiBooking, headshotImg, advanceSimWeek
-} from './engine.js';
-import { normalizeAllMatches } from './details_normalize.js';
+} from "./js/engine.js";
+import { normalizeAllMatches } from "./js/details_normalize.js";
 import { snapshotWeekBaselineOnce } from './engine/snapshots.js';
-import { openMatchModal } from './match.js'; // modal caller
+import { openMatchModal } from "./js/match.js"; // modal caller
 
 const root = document.getElementById('results-root') || (() => {
   const m = document.createElement('main'); m.id = 'results-root'; document.body.appendChild(m); return m;

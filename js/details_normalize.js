@@ -1,8 +1,8 @@
 // public/js/details_normalize.js
 // One-time normaliser: rebuilds canonical state.matches[*].details from history/debug/explain/text.
 
-import { loadState, saveState, ensureInitialised } from './engine.js';
-import { el } from './util.js'; // if you don't need el, you can remove this import
+import { loadState, saveState, ensureInitialised } from "./js/engine.js";
+import { el } from "./js/util.js"; // if you don't need el, you can remove this import
 
 /* --------- Utilities --------- */
 

@@ -1,5 +1,5 @@
-import {RAW} from './util.js';
-import {newSeason, runShow, helpers} from './engine.js';
+import {RAW} from "./js/util.js";
+import {newSeason, runShow, helpers} from "./js/engine.js";
 
 const out = document.getElementById('tests-root');
 const log = [];
