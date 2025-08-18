@@ -1,5 +1,6 @@
 // public/js/engine/snapshots.js
 // Save a per-wrestler baseline once per week so profiles can show deltas “since last week”.
+import { nsKey } from "./state_mgmt.js"; // or from "./engine.js" if re-exported
 
 const ATTR_KEYS = [
   'workrate','psychology','charisma','mic','chemistry',
@@ -20,7 +21,7 @@ export function snapshotWeekBaseline(state){
     state.roster.forEach(w => {
       const key = `wwf_attr_snap_v1::${w.name}`;
       const pack = { week, values: makeSnapOf(w) };
-      localStorage.setItem(key, JSON.stringify(pack));
+      localStorage.setItem(nsKey(`snap::${key}`), JSON.stringify(pack));
     });
   }catch{}
 }

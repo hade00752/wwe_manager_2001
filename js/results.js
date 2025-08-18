@@ -7,6 +7,7 @@ import {
 import { normalizeAllMatches } from "./details_normalize.js";
 import { snapshotWeekBaselineOnce } from './engine/snapshots.js';
 import { openMatchModal } from "./match.js"; // modal caller
+import { nsKey } from "./engine.js"; // with other imports
 
 const root = document.getElementById('results-root') || (() => {
   const m = document.createElement('main'); m.id = 'results-root'; document.body.appendChild(m); return m;
@@ -83,7 +84,9 @@ function init(){
     try { normalizeAllMatches(); } catch (e) { console.warn('Normalization on boot failed:', e); }
 
     // If Booking just saved a payload, simulate, persist, re-normalize, then show latest
-    const payloadStr = localStorage.getItem("wwf_booking_payload");
+    const TMP_KEY = nsKey("booking_payload");
+    const payloadStr = localStorage.getItem(TMP_KEY);
+    if (payloadStr) localStorage.removeItem(TMP_KEY);
     if (payloadStr) {
       localStorage.removeItem("wwf_booking_payload");
 

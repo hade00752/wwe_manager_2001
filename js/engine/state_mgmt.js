@@ -1,7 +1,6 @@
 // public/js/engine/state_mgmt.js
 import { RAW, SD, r, clamp } from '../util.js';
 import { TITLES, buildFixedRoster, ATTR_OVERRIDES } from '../data.js';
-import { getJSON, setJSON } from '../state.js';
 import { setChampionFlags, stripCrossBrandTitles } from './champions.js';
 import { men, women, pickTop, pairForTag, uniqSorted, byBrand } from './helpers.js';
 import { defaultRelationships, seedEra2000 } from './relationships.js';
@@ -9,10 +8,53 @@ import { pushMail } from './mail.js';
 
 /* ────────────────────────────── storage keys ───────────────────────────── */
 
-export const STORAGE_KEYS = {
-  primary: 'wwf_sim_state_v1',
-  legacy:  'wwf_state',
-};
+// Single source of truth for the save key.
+export const SAVE_KEY = 'wwe2001_save_v1';
+export const nsKey = (suffix) => `${SAVE_KEY}::${suffix}`;
+
+// Any old keys we might have used before (or that other pages used).
+const LEGACY_KEYS = [
+  'wwf_sim_state_v1',
+  'wwf_state',
+  'wwe_manager_2001',
+  'wwe_2001_sim',
+  'wwe_save',
+  'game_state',
+  'state',
+];
+
+// lightweight JSON helpers
+function getJSON(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+function setJSON(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// Adopt legacy keys if SAVE_KEY is missing.
+function adoptLegacyIfNeeded() {
+  if (localStorage.getItem(SAVE_KEY)) return;
+  let bestKey = null, bestLen = -1;
+  for (const k of Object.keys(localStorage)) {
+    if (LEGACY_KEYS.includes(k) || /wwe|wwf|save|state/i.test(k)) {
+      const v = localStorage.getItem(k) || '';
+      if (v.length > bestLen) { bestLen = v.length; bestKey = k; }
+    }
+  }
+  if (bestKey) {
+    localStorage.setItem(SAVE_KEY, localStorage.getItem(bestKey));
+    // optional: clean up dupes so we never flip-flop again
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (k !== SAVE_KEY && (LEGACY_KEYS.includes(k) || /wwe|wwf|save|state/i.test(k))) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch {}
+  }
+}
+adoptLegacyIfNeeded();
 
 /* ─────────────────────────────── state shape ────────────────────────────── */
 
@@ -92,70 +134,30 @@ export function applyFixedChampions(state, seed = CHAMPION_SEED){
   }
 }
 
-/* ────────────────── reconciliation: primary ↔ legacy keys ─────────────── */
-
-function scoreProgress(s){
-  const hist = Array.isArray(s?.history) ? s.history.length : 0;
-  const week = Number(s?.week || 1);
-  return hist * 1000 + week; // prefer more history, then higher week
-}
-
-function reconcileStates(a, b){
-  if (!a && !b) return null;
-  if (a && !b)  return a;
-  if (!a && b)  return b;
-
-  const newer  = scoreProgress(a) >= scoreProgress(b) ? a : b;
-  const older  = newer === a ? b : a;
-
-  // Merge shallowly, preferring the newer snapshot
-  const merged = Object.assign({}, older, newer);
-
-  // Keep the longer history if they differ
-  const histA = Array.isArray(a.history) ? a.history : [];
-  const histB = Array.isArray(b.history) ? b.history : [];
-  merged.history = histA.length >= histB.length ? histA : histB;
-
-  // Always keep the latest week
-  merged.week = Math.max(Number(a.week || 1), Number(b.week || 1));
-
-  // Merge inbox (dedupe by title+body)
-  const inboxA = Array.isArray(a.inbox) ? a.inbox : [];
-  const inboxB = Array.isArray(b.inbox) ? b.inbox : [];
-  const sig = m => `${m.title || ''}::${m.body || ''}::${m.from || ''}`;
-  const seen = new Set();
-  merged.inbox = [...inboxA, ...inboxB].filter(m => {
-    const k = sig(m); if (seen.has(k)) return false; seen.add(k); return true;
-  });
-
-  // Flags: if either says welcomeSent=true, keep true
-  merged.flags = Object.assign({}, a.flags||{}, b.flags||{});
-  if (a?.flags?.welcomeSent || b?.flags?.welcomeSent) merged.flags.welcomeSent = true;
-
-  return merged;
-}
-
 /* ───────────────────── migration-safe load / save ───────────────────── */
 
 export function loadState(){
-  const primary = getJSON(STORAGE_KEYS.primary);
-  const legacy  = getJSON(STORAGE_KEYS.legacy);
-  const merged  = reconcileStates(primary, legacy);
+  const s = getJSON(SAVE_KEY);
 
-  if (merged) {
-    // Write the reconciled result to both keys to prevent flip-flop
-    try { setJSON(STORAGE_KEYS.primary, merged); } catch {}
-    try { setJSON(STORAGE_KEYS.legacy,  merged); } catch {}
+  // one-time sanitizer for old inbox links (/profile? -> profile.html?)
+  if (s?.inbox && Array.isArray(s.inbox)) {
+    let changed = false;
+    for (const m of s.inbox) {
+      for (const fld of ['body','html','text']) {
+        if (typeof m[fld] === 'string' && m[fld].includes('/profile?')) {
+          m[fld] = m[fld].replaceAll('/profile?', 'profile.html?');
+          changed = true;
+        }
+      }
+    }
+    if (changed) setJSON(SAVE_KEY, s);
   }
 
-  return merged || null;
+  return s || null;
 }
 
 export function saveState(state){
-  try { setJSON(STORAGE_KEYS.primary, state); } catch (e) {
-    console.warn('saveState: failed to write primary key', e);
-  }
-  try { setJSON(STORAGE_KEYS.legacy, state); } catch {}
+  setJSON(SAVE_KEY, state);
 }
 
 /* ─────────────────────────── sim clock helpers ────────────────────────── */
@@ -263,15 +265,17 @@ export function newSeason(brand = RAW, { useChampionSeed = true } = {}){
 /* ─────────────────────── migration / initialisation ───────────────────── */
 
 export function ensureInitialised(state){
-  state = (state && typeof state === 'object') ? state : {};
+  // If caller passed nothing, try to load from storage.
+  state = (state && typeof state === 'object') ? state : loadState() || {};
 
   if (state.week == null) state.week = 1;
   if (!state.startDate)   state.startDate = '01-04-2001';
 
-  // Only bootstrap if champs container is missing;
-  // never wipe existing progress.
+  // Only bootstrap if champs container is missing; never wipe existing progress.
   if (!state.champs || !state.champs[RAW] || !state.champs[SD]) {
     const bootstrap = newSeason(state.brand || RAW, { useChampionSeed: true });
+
+    // Preserve the user’s ongoing progress if present.
     const preserved = {
       week: state.week,
       startDate: state.startDate,

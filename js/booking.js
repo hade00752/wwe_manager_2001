@@ -3,6 +3,7 @@ import { RAW, SD, SEGMENTS, TITLE_ALLOWED_ON, el } from "./util.js";
 import { newSeason, loadState, saveState, ensureInitialised, availableByBrand, byBrand } from "./engine.js";
 import { TITLES } from "./data.js";
 import { headshotImg } from "./engine.js";
+import { nsKey } from "./engine.js"; // top of file with other imports
 
 const root = document.getElementById('booking-root') || (function(){
   const m = document.createElement('main'); m.id = 'booking-root'; document.body.appendChild(m); return m;
@@ -202,7 +203,9 @@ function bookingForm(){
         }
       }
       const payload = {week: state.week, brand: state.brand, booking};
-      localStorage.setItem("wwf_booking_payload", JSON.stringify(payload));
+      localStorage.setItem(nsKey("booking_payload"), JSON.stringify(payload));
+      localStorage.removeItem("wwf_booking_payload"); // kill legacy temp key if present
+
       saveState(state);
       location.href="./results.html";
     }catch(err){

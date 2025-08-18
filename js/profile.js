@@ -2,7 +2,7 @@
 // FM-style wrestler profile with streamlined attributes (15-stat model + birthday/age + color scale & delta arrows)
 
 import { el, clamp, RAW, SD } from "./util.js";
-import { loadState, ensureInitialised, headshotImg, saveState } from "./engine.js";
+import { loadState, ensureInitialised, headshotImg, saveState, nsKey } from "./engine.js";
 
 /* ---------- never fail silently ---------- */
 function bootError(msg, err){
@@ -164,10 +164,18 @@ function snapshotOf(w){
   ATTR_KEYS.forEach(k => { m[k] = Number(w[k] ?? 60); });
   return m;
 }
+
+/* Namespaced snapshot reader (preferred) + legacy fallback */
+function loadPrevSnapshot(name){
+  try {
+    return JSON.parse(localStorage.getItem(nsKey(`attr::${name}`)) || 'null');
+  } catch { return null; }
+}
 // legacy localStorage fallback (pre-snapshots.js)
 function loadPrevSnapshotLegacy(name){
   try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::${name}`) || 'null'); } catch { return null; }
 }
+
 function computeDeltas(curr, prev){
   const d = {};
   if (!prev) return d;
@@ -313,10 +321,7 @@ function getRosterMap(state){
 function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0; }
 
 /**
- * Scan saved match history for any "title change!" matches the wrestler won.
- * Apply permanent boosts once per match (saved via state.awardsApplied[matchId]).
- * Returns an *aggregate delta map* (e.g., {starpower:+3, reputation:+3, consistency:+1})
- * so we can show arrows immediately even if we haven't advanced the week yet.
+ * (kept) applyRetroTitleBoosts — used to compute deltas immediately
  */
 function applyRetroTitleBoosts(state, who){
   const applied = {}; // accumulate deltas for this profile view
@@ -333,13 +338,11 @@ function applyRetroTitleBoosts(state, who){
           const tags = seg.tags || [];
           if (!tags.includes('title change!')) continue;
 
-          // winners from explain/details (new runs) or fallback to match store
           const winners = seg.explain?.winners
                        || state.matches?.[seg.id]?.details?.winners
                        || [];
           if (!winners.includes(who.name)) continue;
 
-          // determine opponent side avg star power for marquee check
           const names = (seg.names && seg.names.length) ? seg.names
                        : state.matches?.[seg.id]?.names || [];
           let oppAvg = 0;
@@ -410,8 +413,9 @@ function init(){
   // deltas vs this week's baseline snapshot (captured at runShow start)
   const currSnap = snapshotOf(w);
   const baseline =
-    (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
-      || loadPrevSnapshotLegacy(w.name); // legacy fallback
+      (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
+   || loadPrevSnapshot(w.name)        // namespaced preferred
+   || loadPrevSnapshotLegacy(w.name); // legacy fallback
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
 
   // --- add safe ringSafety delta if baseline has it ---
@@ -578,7 +582,7 @@ function init(){
   const beltsCard = card('Belts', el('div',{text: w.championOf || 'None'}));
   right.appendChild(beltsCard);
 
-  const statusCard = card('Status');
+  const statusCard = card('Status'));
   const healthy = (w.injuryWeeks||0)===0;
   const retireInfo = retirementStatus(w, nowSim);
   statusCard.appendChild(el('div',{class:'pf-info-line'},
@@ -596,34 +600,64 @@ function init(){
   if (isFreeAgent(w.brand)) {
     const contract = card('Contract');
     contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent.'}));
-    const roleSel = el('select',{}, ...['wrestler','manager','mentor'].map(r => el('option',{value:r,text:r})));
-    roleSel.value = w.role || 'wrestler';
-    const btnRaw = el('button',{text:'Sign to RAW'});
-    const btnSD  = el('button',{text:'Sign to SmackDown'});
-    btnRaw.onclick = () => { w.brand = RAW; w.role = roleSel.value; saveState(state); location.reload(); };
-    btnSD.onclick  = () => { w.brand = SD;  w.role = roleSel.value; saveState(state); location.reload(); };
-    const rowBtns = el('div',{class:'pf-info-line'});
-    rowBtns.appendChild(roleSel);
-    rowBtns.appendChild(btnRaw);
-    rowBtns.appendChild(btnSD);
-    contract.appendChild(rowBtns);
-    right.appendChild(contract);
-  }
 
-  // Bio & Style
+  const roleSel = el('select', {}, ...['wrestler', 'manager', 'mentor'].map(r => el('option', {
+    value: r,
+    text: r
+  })));
+  roleSel.value = w.role || 'wrestler';
+  const btnRaw = el('button', {
+    text: 'Sign to RAW'
+  });
+  const btnSD = el('button', {
+    text: 'Sign to SmackDown'
+  });
+  btnRaw.onclick = () => {
+    w.brand = RAW;
+    w.role = roleSel.value;
+    saveState(state);
+    location.reload();
+  };
+  btnSD.onclick = () => {
+    w.brand = SD;
+    w.role = roleSel.value;
+    saveState(state);
+    location.reload();
+  };
+  const rowBtns = el('div', {
+    class: 'pf-info-line'
+  });
+  rowBtns.appendChild(roleSel);
+  rowBtns.appendChild(btnRaw);
+  rowBtns.appendChild(btnSD);
+  contract.appendChild(rowBtns);
+  right.appendChild(contract);
+  }
   const bioCard = card('Bio & Style');
-  const info = el('div',{class:'pf-info-grid'});
-  info.appendChild(el('div',{class:'pf-info-line',text:`Birthday: ${w.birthday || 'Unknown'}`}));
-  info.appendChild(el('div',{class:'pf-info-line', text:`Style Tags: ${ (w.styleTags?.length? w.styleTags.join(', ') : 'None') }`}));
+  const info = el('div', {
+    class: 'pf-info-grid'
+  });
+  info.appendChild(el('div', {
+    class: 'pf-info-line',
+    text: Birthday: $ {
+    w.birthday || 'Unknown'
+  }
+                      }));
+  info.appendChild(el('div', {
+    class: 'pf-info-line',
+    text: Style Tags: $ {
+    (w.styleTags?.length ? w.styleTags.join(', ') : 'None')
+  }
+  }));
   bioCard.appendChild(info);
   right.appendChild(bioCard);
-
-  // Mount
   grid.appendChild(left);
   grid.appendChild(right);
   wrap.appendChild(grid);
   root.appendChild(wrap);
-}
-
-try { init(); } catch(e){ bootError(e.message, e); }
-
+  }
+  try {
+    init();
+  } catch (e) {
+    bootError(e.message, e);
+  }
