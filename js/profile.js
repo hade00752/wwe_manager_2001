@@ -57,7 +57,7 @@ function ageFromBirthdayAt(bday, refDate){
   const d = parseDDMMYYYY(bday);
   if(!d || !(refDate instanceof Date)) return null;
   let age = refDate.getFullYear() - d.getFullYear();
-  const preBirthday = (refDate.getMonth() < d.getMonth()) ||
+  const preBirthday = (refDate.getMonth() < d.getMonth()) 
                       (refDate.getMonth() === d.getMonth() && refDate.getDate() < d.getDate());
   if(preBirthday) age -= 1;
   return age;
