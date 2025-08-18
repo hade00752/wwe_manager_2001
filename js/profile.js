@@ -168,6 +168,21 @@ function snapshotOf(w){
 function loadPrevSnapshotLegacy(name){
 function findPerMatchBaseline(state, name){
   try{
+    const matches = state.matches || {}; 
+    let found = null, latestWeek = -1; 
+    for (const rec of Object.values(matches)){ 
+      const base = rec?.baseline?.[name]?.values; 
+      if (base){ 
+        const wk = Number(rec.week ?? 0); 
+        if (wk >= latestWeek){ found = base; latestWeek = wk; } 
+      } 
+    } 
+    return found ? { values: found } : null; 
+  }catch{ return null; } 
+}
+
+function findPerMatchBaseline(state, name){
+  try{
    const matches = state.matches || {}; 
     let found = null, latestWeek = -1; 
     for (const rec of Object.values(matches)){ 
@@ -425,8 +440,11 @@ function init(){
   // deltas vs this week's baseline snapshot (captured at runShow start)
   const currSnap = snapshotOf(w);
   const baseline =
-    (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
-      || loadPrevSnapshotLegacy(w.name); // legacy fallback
+      (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
+   || findPerMatchBaseline(state, w.name)
+   || loadPrevSnapshot(w.name)
+   || loadPrevSnapshotLegacy(w.name);
+ // legacy fallback
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
 
   // --- add safe ringSafety delta if baseline has it ---
