@@ -1,5 +1,5 @@
 // public/js/sim_clock.js
-import { loadState, ensureInitialised, simDateString } from "./engine.js";
+import { loadState, ensureInitialised, simDateString } from "./engine.js?v=1755554537";
 
 function inject(){
   const state = loadState(); if (!state) return;

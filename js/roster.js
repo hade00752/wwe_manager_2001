@@ -1,8 +1,8 @@
 // public/js/roster.js
 // Unified, minimal roster view + search.
 
-import { RAW, SD, FA, el, clamp } from "./util.js";
-import { loadState, ensureInitialised, headshotImg } from "./engine.js";
+import { RAW, SD, FA, el, clamp } from "./util.js?v=1755554537";
+import { loadState, ensureInitialised, headshotImg } from "./engine.js?v=1755554537";
 
 const root = document.getElementById('roster-root') || (() => {
   const m = document.createElement('main'); m.id = 'roster-root'; document.body.appendChild(m); return m;

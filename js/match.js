@@ -1,6 +1,6 @@
 // public/js/match.js
-import { loadState, ensureInitialised, headshotImg, saveState } from "./engine.js";
-import { el } from "./util.js";
+import { loadState, ensureInitialised, headshotImg, saveState } from "./engine.js?v=1755554537";
+import { el } from "./util.js?v=1755554537";
 
 /* ---------------- small helpers ---------------- */
 const q = (k) => new URLSearchParams(location.search).get(k);

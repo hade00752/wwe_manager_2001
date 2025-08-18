@@ -1,13 +1,13 @@
 // public/js/results.js
-import { el } from "./util.js";
+import { el } from "./util.js?v=1755554537";
 import {
   loadState, saveState, ensureInitialised,
   runShow, aiBooking, headshotImg, advanceSimWeek
-} from "./engine.js";
+} from "./engine.js?v=1755554537";
 import { normalizeAllMatches } from "./details_normalize.js";
 import { snapshotWeekBaselineOnce } from './engine/snapshots.js';
 import { openMatchModal } from "./match.js"; // modal caller
-import { nsKey } from "./engine.js"; // with other imports
+import { nsKey } from "./engine.js?v=1755554537"; // with other imports
 
 const root = document.getElementById('results-root') || (() => {
   const m = document.createElement('main'); m.id = 'results-root'; document.body.appendChild(m); return m;
