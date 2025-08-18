@@ -1,11 +1,9 @@
-function findPerMatchBaseline(){ return null; }
-// public/js/profile.js
-// FM-style wrestler profile with streamlined attributes (15-stat model + birthday/age + color scale & delta arrows)
+// public/js/profile.js — stable profile with baseline deltas and no undefined calls
 
-import { el, clamp, RAW, SD } from './util.js';
-import { loadState, ensureInitialised, headshotImg, saveState } from './engine.js';
+import { el, clamp, RAW, SD } from "./util.js";
+import { loadState, ensureInitialised, headshotImg, saveState, nsKey } from "./engine.js";
 
-/* ---------- never fail silently ---------- */
+/* ---------- boot error ---------- */
 function bootError(msg, err){
   const root = getRoot();
   const pre = document.createElement('pre');
@@ -21,7 +19,7 @@ function bootError(msg, err){
 window.addEventListener('error', e => bootError(e.message, e.error));
 window.addEventListener('unhandledrejection', e => bootError('Unhandled promise rejection', e.reason));
 
-/* ---------- helpers ---------- */
+/* ---------- tiny utils ---------- */
 function getRoot(){
   return document.getElementById('profile-root') || (() => {
     const m = document.createElement('main'); m.id='profile-root'; document.body.appendChild(m); return m;
@@ -40,46 +38,7 @@ function initialAvatarText(name){
   return (parts[0][0]+parts[1][0]).toUpperCase();
 }
 
-function applyRetroTitleBoostsFromHistory(name) {
-  const state = loadState();
-  if (!state) return 0;
-  state.awardsApplied = state.awardsApplied || {};
-  let applied = 0;
-
-  for (const h of state.history || []) {
-    for (const show of [h.myShow, h.oppShow]) {
-      for (const seg of (show?.segments || [])) {
-        if (!seg?.id) continue;
-        const isChange = (seg.tags || []).some(t => /title\s*change!?/i.test(t));
-        if (!isChange) continue;
-
-        const winners = seg?.details?.winners || seg?.explain?.winners || seg?.debug?.winners || [];
-        if (!winners.includes(name)) continue;
-        if (state.awardsApplied[seg.id]) continue;
-
-        // marquee vs normal via opponent avg starpower
-        const others = (seg.names || []).filter(n => n !== name);
-        const oppObjs = (state.roster || []).filter(w => others.includes(w.name));
-        const oppAvg = oppObjs.length ? oppObjs.reduce((a,w)=>a+(+w.starpower||0),0) / oppObjs.length : 0;
-        const bump = oppAvg >= 80 ? { sp:3, rp:3, cs:1 } : { sp:2, rp:2, cs:1 };
-
-        const w = (state.roster || []).find(x => x.name === name);
-        if (!w) continue;
-        w.starpower   = (+w.starpower||0)   + bump.sp;
-        w.reputation  = (+w.reputation||0)  + bump.rp;
-        w.consistency = (+w.consistency||0) + bump.cs;
-
-        state.awardsApplied[seg.id] = true;
-        applied++;
-      }
-    }
-  }
-
-  if (applied) saveState(state);
-  return applied;
-}
-
-/* ---------- date/age helpers (SIM-CLOCK AWARE) ---------- */
+/* ---------- date/age (SIM CLOCK) ---------- */
 function parseDDMMYYYY(s){
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(s||'').trim());
   if(!m) return null;
@@ -87,7 +46,6 @@ function parseDDMMYYYY(s){
   const d = new Date(Number(yyyy), Number(mm)-1, Number(dd));
   return isNaN(d.getTime()) ? null : d;
 }
-// current sim date = startDate + (week-1)*7 days
 function simNow(state){
   const base = parseDDMMYYYY(state.startDate || '01-04-2001') || new Date(2001,3,1);
   const d = new Date(base.getTime());
@@ -105,7 +63,7 @@ function ageFromBirthdayAt(bday, refDate){
   return age;
 }
 
-/* ---------- Heat helpers (0..100 -> 0..8) ---------- */
+/* ---------- heat helpers ---------- */
 function heatTier(heat) {
   if (typeof heat !== "number") return 0;
   return Math.max(0, Math.round(heat / 12)); // 0..8
@@ -117,7 +75,7 @@ function heatPill(text, tier) {
   return span;
 }
 
-/* ---------- Value color scale & delta helpers ---------- */
+/* ---------- stat color + deltas ---------- */
 function hexToRgb(hex){
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : { r:255,g:255,b:255 };
@@ -129,8 +87,6 @@ function mixColor(hexA, hexB, t){
   const b2 = Math.round(a.b + (b.b - a.b) * t);
   return `rgb(${r}, ${g}, ${b2})`;
 }
-
-// stops (value is 0..99)
 const STAT_STOPS = [
   { at:  0, color: '#4b0000' },
   { at: 20, color: '#ff3b30' },
@@ -139,8 +95,7 @@ const STAT_STOPS = [
   { at: 75, color: '#93e89b' },
   { at: 90, color: '#1f8a3e' },
 ];
-const STAT_BLUE_90 = '#8ec5ff';   // ≥90 = light blue
-
+const STAT_BLUE_90 = '#8ec5ff';
 function colorForStat(v){
   const x = clamp(Number(v || 0), 0, 99);
   if (x >= 90) return STAT_BLUE_90;
@@ -154,7 +109,7 @@ function colorForStat(v){
   return STAT_STOPS[STAT_STOPS.length - 1].color;
 }
 
-// build attr snapshot for comparisons
+/* ---------- snapshot + deltas ---------- */
 const ATTR_KEYS = [
   'workrate','psychology','charisma','mic','chemistry',
   'starpower','reputation','likeability','consistency','momentum',
@@ -165,45 +120,18 @@ function snapshotOf(w){
   ATTR_KEYS.forEach(k => { m[k] = Number(w[k] ?? 60); });
   return m;
 }
-// legacy localStorage fallback (pre-snapshots.js)
+// namespaced preferred
+function loadPrevSnapshot(name){
+  try { return JSON.parse(localStorage.getItem(nsKey(`attr::${name}`)) || 'null'); } catch { return null; }
+}
+// legacy fallback (older builds saved this way)
 function loadPrevSnapshotLegacy(name){
-function findPerMatchBaseline(state, name){
-  try{
-    const matches = state.matches || {}; 
-    let found = null, latestWeek = -1; 
-    for (const rec of Object.values(matches)){ 
-      const base = rec?.baseline?.[name]?.values; 
-      if (base){ 
-        const wk = Number(rec.week ?? 0); 
-        if (wk >= latestWeek){ found = base; latestWeek = wk; } 
-      } 
-    } 
-    return found ? { values: found } : null; 
-  }catch{ return null; } 
-}
-
-function findPerMatchBaseline(state, name){
-  try{
-   const matches = state.matches || {}; 
-    let found = null, latestWeek = -1; 
-    for (const rec of Object.values(matches)){ 
-      const base = rec?.baseline?.[name]?.values; 
-      if (base){ 
-        const wk = Number(rec.week ?? 0); 
-        if (wk >= latestWeek){ found = base; latestWeek = wk; } 
-      } 
-    } 
-    return found ? { values: found } : null; 
-  }catch{ return null; } 
-}
-
   try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::${name}`) || 'null'); } catch { return null; }
 }
 function computeDeltas(curr, prev){
   const d = {};
   if (!prev) return d;
   for (const k of ATTR_KEYS){
-    // Only compute if baseline has this key to avoid bogus arrows
     if (Object.prototype.hasOwnProperty.call(prev, k)) {
       const a = Number(curr[k] ?? 0), b = Number(prev[k] ?? 0);
       const diff = a - b;
@@ -213,7 +141,7 @@ function computeDeltas(curr, prev){
   return d;
 }
 
-/* ---------- FM-ish CSS (self-contained) ---------- */
+/* ---------- FM-ish CSS (scoped) ---------- */
 (function injectStyles(){
   const s=document.createElement('style');
   s.textContent = `
@@ -273,7 +201,7 @@ function computeDeltas(curr, prev){
   document.head.appendChild(s);
 })();
 
-/* ---------- value row with color + delta ---------- */
+/* ---------- rows & bars ---------- */
 function statRow(label, value, key, deltas){
   const r=el('div',{class:'pf-row'});
   r.appendChild(el('div',{class:'pf-row__l',text:label}));
@@ -290,20 +218,18 @@ function statRow(label, value, key, deltas){
     arrow.title = (d>0?'+':'') + d;
     right.appendChild(arrow);
   }
-
   r.appendChild(right);
   return r;
 }
-
-/* ---------- tiny progress bar ---------- */
 function bar(label, value, max=100){
   const w=el('div',{class:'pf-progress'});
   w.appendChild(el('div',{class:'pf-progress__label',text:`${label} (${value}/${max})`}));
-  const p=el('div',{class:'pf-progress__bar'}), f=el('div',{class:'pf-progress__fill',style:{width:`${clamp(value||0,0,max)}%`}});
+  const p=el('div',{class:'pf-progress__bar'});
+  const f=el('div',{class:'pf-progress__fill',style:{width:`${clamp(value||0,0,max)}%`}});
   p.appendChild(f); w.appendChild(p); return w;
 }
 
-/* ---------- overall formula ---------- */
+/* ---------- overall & status ---------- */
 function overallOf(w){
   const promoLike = ((w.charisma ?? w.promo ?? 60) + (w.mic ?? w.promo ?? 60)) / 2;
   const psych = w.psychology ?? 60;
@@ -318,8 +244,6 @@ function overallOf(w){
   );
   return clamp(o, 1, 99);
 }
-
-/* ---------- retirement display helper (SIM-CLOCK AWARE) ---------- */
 function retirementStatus(w, refDate){
   const age = ageFromBirthdayAt(w.birthday, refDate);
   const lowPhys = (w.stamina ?? 100) < 10 || (w.durability ?? 100) < 10;
@@ -330,84 +254,6 @@ function retirementStatus(w, refDate){
 }
 function isFreeAgent(brand){
   return !(brand === RAW || brand === SD || brand === 'RAW' || brand === 'SmackDown');
-}
-
-/* ---------- Retro boosts from title wins (applied once per match) ---------- */
-function ensureAwards(state){
-  if (!state.awardsApplied) state.awardsApplied = {};
-}
-function getRosterMap(state){
-  const m = new Map();
-  (state.roster||[]).forEach(w=>m.set(w.name, w));
-  return m;
-}
-function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0; }
-
-/**
- * Scan saved match history for any "title change!" matches the wrestler won.
- * Apply permanent boosts once per match (saved via state.awardsApplied[matchId]).
- * Returns an *aggregate delta map* (e.g., {starpower:+3, reputation:+3, consistency:+1})
- * so we can show arrows immediately even if we haven't advanced the week yet.
- */
-function applyRetroTitleBoosts(state, who){
-  const applied = {}; // accumulate deltas for this profile view
-  try{
-    ensureAwards(state);
-    const rmap = getRosterMap(state);
-
-    const brands = Object.keys(state.matchHistory || {});
-    for (const brand of brands){
-      for (const wk of (state.matchHistory[brand] || [])){
-        for (const seg of (wk.segments || [])){
-          if (!seg || !seg.id) continue;
-          if (state.awardsApplied[seg.id]) continue; // already processed earlier
-          const tags = seg.tags || [];
-          if (!tags.includes('title change!')) continue;
-
-          // winners from explain/details (new runs) or fallback to match store
-          const winners = seg.explain?.winners
-                       || state.matches?.[seg.id]?.details?.winners
-                       || [];
-          if (!winners.includes(who.name)) continue;
-
-          // determine opponent side avg star power for marquee check
-          const names = (seg.names && seg.names.length) ? seg.names
-                       : state.matches?.[seg.id]?.names || [];
-          let oppAvg = 0;
-          if ((seg.type === 'tag') || names.length === 4){
-            const sideA = [names[0], names[1]];
-            const sideB = [names[2], names[3]];
-            const winnerIsA = sideA.some(n => winners.includes(n));
-            const oppSide = winnerIsA ? sideB : sideA;
-            oppAvg = avg(oppSide.map(n => (rmap.get(n)?.starpower ?? 60)));
-          } else if (names.length >= 2){
-            const [a, b] = names;
-            const winnerIsA = winners.includes(a);
-            const opp = rmap.get(winnerIsA ? b : a);
-            oppAvg = opp ? (opp.starpower ?? 60) : 0;
-          }
-
-          const marquee = oppAvg >= 85;
-          const incSP  = marquee ? 3 : 2;
-          const incREP = marquee ? 3 : 2;
-          const incCON = 1;
-
-          who.starpower   = clamp((who.starpower ?? 60) + incSP, 1, 99);
-          who.reputation  = clamp((who.reputation ?? 60) + incREP, 1, 99);
-          who.consistency = clamp((who.consistency ?? 60) + incCON, 1, 99);
-
-          applied.starpower   = (applied.starpower   || 0) + incSP;
-          applied.reputation  = (applied.reputation  || 0) + incREP;
-          applied.consistency = (applied.consistency || 0) + incCON;
-
-          state.awardsApplied[seg.id] = true; // remember so it's one-time
-        }
-      }
-    }
-  }catch(e){
-    console.warn('applyRetroTitleBoosts failed:', e);
-  }
-  return applied;
 }
 
 /* ---------- render ---------- */
@@ -429,38 +275,23 @@ function init(){
   const w = state.roster.find(x => x.name === name);
   if(!w){ renderNotFound(`Profile not found for "${name}".`); return; }
 
-  const bumped = applyRetroTitleBoostsFromHistory(name);
-
-  // Apply retroactive, one-time title-win boosts and capture their deltas
-  const awardDeltas = {}; // legacy path disabled; boosts applied via history scanner
-  saveState(state);
-
-  // sim date reference
   const nowSim = simNow(state);
 
-  // deltas vs this week's baseline snapshot (captured at runShow start)
+  // deltas vs this week's baseline snapshot (captured by Results via snapshotWeekBaselineOnce)
   const currSnap = snapshotOf(w);
   const baseline =
-      (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
-   || findPerMatchBaseline(state, w.name)
-   || 
-   || loadPrevSnapshotLegacy(w.name);
- // legacy fallback
+    (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
+    || loadPrevSnapshot(w.name)        // namespaced preferred
+    || loadPrevSnapshotLegacy(w.name); // legacy fallback
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
 
-  // --- add safe ringSafety delta if baseline has it ---
+  // Ring Safety extra delta (shown under Risk)
   const deltas = { ...baseDeltas };
   if (baseline?.values && typeof baseline.values.ringSafety === 'number') {
     const rsNow = Number(w.ringSafety ?? 0);
     const rsThen = Number(baseline.values.ringSafety ?? rsNow);
     const rsDiff = rsNow - rsThen;
     if (rsDiff !== 0) deltas.ringSafety = rsDiff;
-  }
-  // ----------------------------------------------------
-
-  // Merge immediate award deltas so arrows show right away (don’t wait a week)
-  for (const [k,v] of Object.entries(awardDeltas)) {
-    deltas[k] = (deltas[k] || 0) + v;
   }
 
   const overall = overallOf(w);
@@ -471,15 +302,8 @@ function init(){
 
   // Header
   const header = el('div',{class:'pf-header'});
-
-  // Avatar with fallback
   const avatar = el('div',{class:'pf-avatar'});
-  const headshot = headshotImg(w.name, {
-    className: 'pf-avatar__img',
-    width: 96, height: 96,
-    exts: ['webp','png','jpg','jpeg'],
-    alt: w.name
-  });
+  const headshot = headshotImg(w.name, { className:'pf-avatar__img', width:96, height:96, exts:['webp','png','jpg','jpeg'], alt:w.name });
   headshot.onerror = () => {
     avatar.innerHTML = '';
     const fb = el('div',{class:'pf-avatar__fb', text: initialAvatarText(w.name)});
@@ -490,7 +314,6 @@ function init(){
 
   const heading = el('div');
   heading.appendChild(el('h2',{class:'pf-name', text: w.name}));
-
   const badges = el('div',{class:'pf-badges'});
   badges.appendChild(el('span',{class:'pf-badge',text:w.brand}));
   badges.appendChild(el('span',{class:'pf-badge',text:(w.gender==='F'?'Women':'Men')}));
@@ -508,7 +331,7 @@ function init(){
   header.appendChild(overallBox);
   wrap.appendChild(header);
 
-  // Top line info: Fatigue + Age + DOB (SIM AGE)
+  // Top line info
   const age = ageFromBirthdayAt(w.birthday, nowSim);
   wrap.appendChild(bar('Fatigue', w.fatigue ?? 0, 100));
   wrap.appendChild(el('div',{class:'pf-progress__label', text:`Age: ${age ?? 'Unknown'} • DOB: ${w.birthday || 'Unknown'}`}));
@@ -516,14 +339,11 @@ function init(){
   // Grid
   const grid = el('div',{class:'pf-grid'});
 
-  /* ---------------- LEFT: attributes + storylines ---------------- */
+  /* LEFT: attributes + storylines */
   const left = el('div',{class:'pf-col'});
-
-  // Attributes
   const attrsCard = card('Attributes');
   const attrs = el('div',{class:'pf-attrs'});
 
-  // In-Ring
   const boxRing = el('div',{class:'pf-box'});
   boxRing.appendChild(el('div',{class:'pf-box__title',text:'In-Ring'}));
   boxRing.appendChild(statRow('Work Rate', w.workrate ?? 60, 'workrate', deltas));
@@ -533,7 +353,6 @@ function init(){
   boxRing.appendChild(statRow('Chemistry', w.chemistry ?? 60, 'chemistry', deltas));
   attrs.appendChild(boxRing);
 
-  // Profile
   const boxProf = el('div',{class:'pf-box'});
   boxProf.appendChild(el('div',{class:'pf-box__title',text:'Profile'}));
   boxProf.appendChild(statRow('Star Power', w.starpower ?? 60, 'starpower', deltas));
@@ -543,38 +362,16 @@ function init(){
   boxProf.appendChild(statRow('Momentum', w.momentum ?? 60, 'momentum', deltas));
   attrs.appendChild(boxProf);
 
-  // Physical
   const boxPhys = el('div',{class:'pf-box'});
   boxPhys.appendChild(el('div',{class:'pf-box__title',text:'Physical'}));
   boxPhys.appendChild(statRow('Stamina', w.stamina ?? 60, 'stamina', deltas));
   boxPhys.appendChild(statRow('Durability', w.durability ?? 60, 'durability', deltas));
   boxPhys.appendChild(statRow('Strength/Power', w.strengthPower ?? 60, 'strengthPower', deltas));
   boxPhys.appendChild(statRow('Agility', w.agility ?? 60, 'agility', deltas));
-  boxPhys.appendChild(statRow('Athleticism', w.athleticism ?? 60, 'athleticism', deltas));
-  attrs.appendChild(boxPhys);
-
-  // Risk & Longevity
-  const riskCard = el('div',{class:'pf-box'});
-  riskCard.appendChild(el('div',{class:'pf-box__title',text:'Risk & Longevity'}));
-  const injuryRisk = (w.ringSafety ?? 70) + (w.professionalism ?? 70) + (w.durability ?? 70);
-  const riskTier = (injuryRisk >= 230) ? 'Very Low' : (injuryRisk >= 210) ? 'Low' : (injuryRisk >= 180) ? 'Moderate' : 'High';
-  riskCard.appendChild(el('div',{class:'pf-row'},
-    el('div',{class:'pf-row__l',text:'Injury Risk'}),
-    el('div',{class:'pf-row__r'}, el('span',{text:riskTier}))
-  ));
-  // NEW: show Ring Safety (mentorship-affected) with optional delta
-  riskCard.appendChild(statRow('Ring Safety', w.ringSafety ?? 60, 'ringSafety', deltas));
-  riskCard.appendChild(statRow('Durability', w.durability ?? 60, 'durability', deltas));
-  riskCard.appendChild(statRow('Stamina', w.stamina ?? 60, 'stamina', deltas));
-  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Fatigue'}), el('div',{class:'pf-row__r',text:String(w.fatigue ?? 0)})));
-  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Age'}), el('div',{class:'pf-row__r',text:String(age ?? 'Unknown')})));
-  riskCard.appendChild(el('div',{class:'pf-row'}, el('div',{class:'pf-row__l',text:'Retirement Status'}), el('div',{class:'pf-row__r',text:retirementStatus(w, nowSim).text})));
-  attrs.appendChild(riskCard);
-
+  boxPhysAppend: attrs.appendChild(boxPhys);
   attrsCard.appendChild(attrs);
   left.appendChild(attrsCard);
 
-  // Storylines
   const storyCard = card('Storylines');
   const hotWith = [];
   const hotKeys = Object.keys(state.hotMatches || {});
@@ -606,9 +403,8 @@ function init(){
   }
   left.appendChild(storyCard);
 
-  /* ---------------- RIGHT: belts / status / bio (+ Contract for FA) ---------------- */
+  /* RIGHT: belts / status / bio (+ Contract for FA) */
   const right = el('div',{class:'pf-col'});
-
   const beltsCard = card('Belts', el('div',{text: w.championOf || 'None'}));
   right.appendChild(beltsCard);
 
@@ -626,7 +422,6 @@ function init(){
   if (w.role) statusCard.appendChild(el('div',{class:'pf-info-line',text:`Role: ${w.role}`}));
   right.appendChild(statusCard);
 
-  // Contract box for Free Agents
   if (isFreeAgent(w.brand)) {
     const contract = card('Contract');
     contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent.'}));
@@ -644,7 +439,6 @@ function init(){
     right.appendChild(contract);
   }
 
-  // Bio & Style
   const bioCard = card('Bio & Style');
   const info = el('div',{class:'pf-info-grid'});
   info.appendChild(el('div',{class:'pf-info-line',text:`Birthday: ${w.birthday || 'Unknown'}`}));
