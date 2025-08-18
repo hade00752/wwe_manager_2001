@@ -1,0 +1,314 @@
+/* ==========================================================================
+   WWF: Just Bring It — Clean Neon Skin
+   - Cleaner panels, stronger red/blue split, reusable portrait glow frame
+   ========================================================================== */
+
+:root{
+  --ink: #e9eef8;
+  --sub: #a9b9d3;
+
+  --cyan: #41e1ff;
+  --cyan-soft: #9ae6ff;
+  --red:  #ff3a66;
+
+  --good:#1dd3a7;
+  --warn:#ffb14a;
+
+  --surface-1: rgba(10,16,36,.70);
+  --surface-2: rgba(8,14,30,.58);
+  --stroke-1: rgba(140,180,255,.28);
+  --stroke-2: rgba(140,180,255,.16);
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --shadow-soft: 0 8px 28px rgba(0,0,0,.35);
+  --glow-cyan: 0 0 0 1px rgba(65,225,255,.25), 0 0 16px rgba(65,225,255,.18);
+}
+
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0; color:var(--ink);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial;
+  background:#030614; overflow-y:overlay;
+}
+
+/* ---------- Background: stronger red/blue split + honeycomb + subtle scanlines */
+body::before, body::after{ content:""; position:fixed; inset:0; z-index:-2; pointer-events:none; }
+body::before{
+  background:
+    /* split tint */
+    linear-gradient(90deg, rgba(40,150,255,.18) 0 49%, rgba(255,58,102,.18) 51% 100%),
+    /* depth blobs */
+    radial-gradient(1100px 650px at 18% -8%, rgba(40,150,255,.18), transparent 55%),
+    radial-gradient(1100px 650px at 112% 8%, rgba(255,58,102,.14), transparent 55%),
+    /* base */
+    linear-gradient(180deg,#040816 0%, #060b1a 100%),
+    /* honeycomb */
+    url("data:image/svg+xml;utf8,\
+      <svg xmlns='http://www.w3.org/2000/svg' width='28' height='32' viewBox='0 0 28 32'>\
+        <defs><pattern id='hex' width='28' height='32' patternUnits='userSpaceOnUse'>\
+          <path d='M7 2l7-2 7 2 7 14-7 14-7 2-7-2L0 16z' fill='none' stroke=%22%23283b59%22 stroke-opacity=.24/>\
+        </pattern></defs><rect width='100%' height='100%' fill='url(%23hex)'/>\
+      </svg>");
+  background-blend-mode: screen, screen, screen, normal, normal;
+  filter: contrast(104%) saturate(106%);
+}
+body::after{
+  background:
+    radial-gradient(900px 500px at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.16) 70%, rgba(0,0,0,.36) 100%),
+    repeating-linear-gradient(180deg, rgba(255,255,255,.025) 0 1px, transparent 2px 3px);
+  mix-blend-mode: overlay;
+}
+
+/* ---------- Layout */
+header, nav, main{ max-width:1200px; margin:0 auto; padding:16px }
+h1,h2,h3{ margin:6px 0 12px; letter-spacing:.3px }
+a{ color:var(--cyan-soft); text-decoration:none }
+a:hover{ color:#fff; text-shadow: 0 0 10px rgba(65,225,255,.35) }
+
+/* ---------- Top nav links (Booking • Results • Roster) */
+nav a{
+  display:inline-block; padding:10px 14px; border-radius:12px; margin-right:8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+  border: 1px solid var(--stroke-2);
+}
+nav a:hover{ border-color: var(--stroke-1); box-shadow: var(--glow-cyan) }
+
+/* ---------- Cards (cleaner) */
+.card{
+  background: linear-gradient(180deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--stroke-2);
+  border-radius: var(--radius-lg);
+  padding:16px; margin:16px 0;
+  box-shadow: var(--shadow-soft);
+}
+.card > h2{ margin-bottom:8px }
+
+/* ---------- Pills / tags */
+.pill{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  border:1px solid var(--stroke-1); color:var(--cyan-soft); font-size:12px; letter-spacing:.2px;
+  background: linear-gradient(180deg, rgba(65,225,255,.10), rgba(65,225,255,.06));
+  margin-right:8px;
+}
+.pill.warn{ color:var(--warn); border-color: rgba(255,177,74,.45); background: linear-gradient(180deg, rgba(255,177,74,.16), rgba(255,177,74,.06)); }
+.pill.good{ color:var(--good); border-color: rgba(29,211,167,.45); background: linear-gradient(180deg, rgba(29,211,167,.16), rgba(29,211,167,.06)); }
+.pill.title{ color:var(--cyan); border-color: rgba(128,170,255,.60); }
+
+/* ---------- Controls */
+label{ font-size:12px; color:var(--sub) }
+select,input,button{
+  background: rgba(14,22,48,.82);
+  color:var(--ink);
+  border:1px solid var(--stroke-1);
+  border-radius:12px; padding:10px 12px; outline:none;
+}
+button{ cursor:pointer; text-transform:uppercase; letter-spacing:.5px }
+button:hover{ box-shadow: var(--glow-cyan) }
+
+/* ---------- Tables */
+table{ width:100%; border-collapse:collapse }
+th,td{
+  padding:10px 8px; border-bottom:1px solid rgba(140,180,255,.18);
+  color:var(--ink); text-align:left
+}
+th{ color:#d6e3ff; font-weight:600; font-size:12px; letter-spacing:.5px; text-transform:uppercase }
+tr:hover td{ background: rgba(65,225,255,.04) }
+
+/* ---------- Number bubbles (scores) if you use .badge or <kbd> */
+.badge{
+  display:inline-block; min-width:28px; padding:2px 8px;
+  background: rgba(255,255,255,.06);
+  border:1px solid var(--stroke-1); border-radius:999px; font-size:12px;
+}
+
+/* ---------- Progress bars (profile) */
+.barrow{ display:grid; grid-template-columns:120px 1fr 40px; align-items:center; gap:12px; margin:8px 0 }
+.bar{ height:10px; border-radius:999px; background:rgba(140,180,255,.18); overflow:hidden; position:relative }
+.bar::before{ content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(65,225,255,.18), rgba(65,225,255,.05)) }
+.barfill{ height:100%; background:linear-gradient(90deg, rgba(65,225,255,.90), rgba(158,236,255,1)); box-shadow:0 0 12px rgba(65,225,255,.45) }
+.barlabel{ color:var(--sub) } .barval{ text-align:right; color:#eef4ff }
+
+/* ---------- Portrait frame (glow) — use this anywhere ----------
+   Markup:
+     <div class="portrait-frame">
+       <img class="portrait" src="/img/rock.jpg" alt="The Rock">
+     </div>
+*/
+.portrait-frame{
+  position:relative; display:inline-block; border-radius:12px; overflow:hidden;
+  background: radial-gradient(120px 80px at 20% 0%, rgba(65,225,255,.18), transparent 60%);
+  border:1px solid rgba(120,180,255,.35);
+  box-shadow: var(--glow-cyan);
+}
+.portrait-frame::after{
+  content:""; position:absolute; inset:0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), inset 0 0 24px rgba(65,225,255,.10);
+  pointer-events:none;
+}
+.portrait{ display:block; width:100%; height:auto; }
+
+/* Optional variants */
+.portrait--blue .portrait-frame{ box-shadow: 0 0 0 1px rgba(65,225,255,.25), 0 0 22px rgba(65,225,255,.25) }
+.portrait--red  .portrait-frame{ box-shadow: 0 0 0 1px rgba(255,58,102,.25), 0 0 22px rgba(255,58,102,.22) }
+
+/* ---------- FM-ish profile small helpers used by profile.js ---------- */
+.pf-overall__num{ color:var(--cyan); text-shadow: 0 0 14px rgba(65,225,255,.28) }
+.pf-badge{ padding:4px 9px; border-radius:999px; background:rgba(65,225,255,.08); border:1px solid var(--stroke-1); font-size:12px }
+.pf-badge.good{ background:rgba(29,211,167,.14); border-color:rgba(29,211,167,.4) }
+.pf-badge.warn{ background:rgba(255,177,74,.16); border-color:rgba(255,177,74,.45) }
+
+/* ---------- Scrollbar to match theme ---------- */
+*{ scrollbar-width:thin; scrollbar-color: rgba(120,170,255,.35) rgba(10,18,40,.2); }
+*::-webkit-scrollbar{ height:10px; width:10px }
+*::-webkit-scrollbar-track{ background: rgba(10,18,40,.2) }
+*::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, rgba(65,225,255,.55), rgba(65,225,255,.30));
+  border-radius:999px; border:2px solid rgba(10,18,40,.2)
+}
+*::-webkit-scrollbar-thumb:hover{
+  background: linear-gradient(180deg, rgba(65,225,255,.75), rgba(65,225,255,.40));
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px){
+  .grid{ display:grid; grid-template-columns: 1fr; gap:14px }
+}
+
+/* Heat pill colors by tier */
+.pill.heat { border-color:rgba(255,255,255,.18); }
+.pill.heat-0, .pill.heat-1 { color:#95a5a6; }    /* cool */
+.pill.heat-2, .pill.heat-3 { color:#f1c40f; }    /* warm */
+.pill.heat-4, .pill.heat-5 { color:#e67e22; }    /* hot-ish */
+.pill.heat-6, .pill.heat-7 { color:#e74c3c; }    /* hot */
+.pill.heat-8 { color:#5dade2; }                  /* white-hot */
+
+
+.match-summary {
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* --- Results: match boxes --- */
+.matchbox{
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+}
+.matchbox__head{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.matchbox__tags{
+  display: inline-flex;
+  gap: 6px;
+}
+.matchbox__summary{
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255,255,255,.12);
+  opacity: .9;
+}
+
+/* --- Color-coded score pill --- */
+.pill.score{ font-weight:700; }
+.pill.score.blue   { background: rgba(93,173,226,.18); border-color: rgba(93,173,226,.45); }
+.pill.score.green  { background: rgba(46,204,113,.18); border-color: rgba(46,204,113,.45); }
+.pill.score.yellow { background: rgba(230,126,34,.18); border-color: rgba(230,126,34,.45); }
+.pill.score.red    { background: rgba(231,76,60,.18);  border-color: rgba(231,76,60,.45); }
+
+/* --- Avatars --- */
+.avatar {
+  width: 32px; height: 32px; border-radius: 999px;
+  object-fit: cover; display:inline-block; vertical-align:middle;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset;
+}
+.avatar--lg { width: 96px; height: 96px; border-radius: 12px; }
+
+.avatar-fallback {
+  width: 32px; height: 32px; border-radius: 999px;
+  display:grid; place-items:center; font-weight:700;
+  color: var(--pf-ink,rgba(255,255,255,.92));
+  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset;
+}
+.avatar--lg + .avatar-fallback { width: 96px; height: 96px; border-radius: 12px; }
+
+.match-avatars { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 0 0; }
+
+.avatar { border-radius: 50%; object-fit: cover; display:inline-block; }
+.avatar-strip { display:flex; gap:8px; margin-top:6px; align-items:center; }
+.match-summary { margin-top:6px; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.08); color:var(--pf-ink); opacity:.9; }
+
+.pick-with-photo select { vertical-align: middle; }
+.pick-with-photo .avatar { vertical-align: middle; }
+
+.pf-avatar {
+  width: 96px;           /* match desired size */
+  height: 96px;          /* match width */
+  border-radius: 8px;    /* or 0 if you want a square instead of a circle */
+  overflow: hidden;      /* hides any overflow from the image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000; /* fallback background */
+}
+
+.pf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* ensures the image fills without distortion */
+}
+
+.row > button { margin: 0 4px; }
+.segline { display:flex; align-items:center; gap:8px; }
+.segsummary { opacity:.85; margin:4px 0 2px; }
+.segtext { color: var(--pf-sub, rgba(255,255,255,.72)); }
+
+/* box around each segment */
+.segbox{
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  background: rgba(0,0,0,.12);
+}
+
+/* header row layout */
+.segline{ display:flex; align-items:center; gap:8px; }
+
+/* one-liner summary: colored like the score, distinct style */
+.segsummary{
+  margin-top: 6px;
+  font-weight: 600;
+  font-size: .95rem;
+  letter-spacing: .2px;
+}
+.segsummary.blue   { color:#2b6cb0; }
+.segsummary.green  { color:#2f855a; }
+.segsummary.yellow { color:#b7791f; }
+.segsummary.red    { color:#c53030; }
+
+/* subtle divider between summary and detail */
+.segdivider{
+  border: 0;
+  border-top: 1px dashed rgba(255,255,255,.12);
+  margin: 6px 0 8px;
+}
+
+/* longer commentary line */
+.segtext{
+  color: rgba(255,255,255,.80);
+}
+
+/* colored score pill (stays as before) */
+.pill.score.blue   { background:#2b6cb0; }
+.pill.score.green  { background:#2f855a; }
+.pill.score.yellow { background:#b7791f; }
+.pill.score.red    { background:#c53030; }

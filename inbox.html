@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <base href="wwe_2001_sim/">
+  <meta charset="utf-8"/>
+  <title>Inbox</title>
+  <link rel="stylesheet" href="./styles.css?v=9"/>
+  <style>
+    #boot-error {
+      white-space: pre-wrap;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      padding: 12px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      margin: 12px;
+    }
+  </style>
+  <script>
+    (function(){
+      function showBootError(msg, err){
+        var r=document.getElementById('inbox-root')||(function(){
+          var m=document.createElement('main');m.id='inbox-root';
+          document.body.appendChild(m);return m;
+        })();
+        var pre=document.createElement('pre');pre.id='boot-error';
+        pre.textContent="[Inbox load error]\n"+msg+(err?("\n\n"+(err.stack||err.message||String(err))):"");
+        r.innerHTML="";r.appendChild(pre);
+      }
+      window.addEventListener('error',e=>showBootError(e.message,e.error));
+      window.addEventListener('unhandledrejection',e=>showBootError("Unhandled promise rejection",e.reason));
+      window.__showInboxBootError=showBootError;
+    })();
+  </script>
+  <script type="module" src="js/inbox.js?v=8"></script>
+</head>
+<body>
+<header><h1>Inbox</h1></header>
+<script type="module" src="./js/nav.js"></script>
+<main class="card" id="inbox-root"></main>
+</body>
+</html>
