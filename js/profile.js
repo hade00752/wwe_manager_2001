@@ -39,45 +39,6 @@ function initialAvatarText(name){
   return (parts[0][0]+parts[1][0]).toUpperCase();
 }
 
-function applyRetroTitleBoostsFromHistory(name) {
-  const state = loadState();
-  if (!state) return 0;
-  state.awardsApplied = state.awardsApplied || {};
-  let applied = 0;
-
-  for (const h of state.history || []) {
-    for (const show of [h.myShow, h.oppShow]) {
-      for (const seg of (show?.segments || [])) {
-        if (!seg?.id) continue;
-        const isChange = (seg.tags || []).some(t => /title\s*change!?/i.test(t));
-        if (!isChange) continue;
-
-        const winners = seg?.details?.winners || seg?.explain?.winners || seg?.debug?.winners || [];
-        if (!winners.includes(name)) continue;
-        if (state.awardsApplied[seg.id]) continue;
-
-        // marquee vs normal via opponent avg starpower
-        const others = (seg.names || []).filter(n => n !== name);
-        const oppObjs = (state.roster || []).filter(w => others.includes(w.name));
-        const oppAvg = oppObjs.length ? oppObjs.reduce((a,w)=>a+(+w.starpower||0),0) / oppObjs.length : 0;
-        const bump = oppAvg >= 80 ? { sp:3, rp:3, cs:1 } : { sp:2, rp:2, cs:1 };
-
-        const w = (state.roster || []).find(x => x.name === name);
-        if (!w) continue;
-        w.starpower   = (+w.starpower||0)   + bump.sp;
-        w.reputation  = (+w.reputation||0)  + bump.rp;
-        w.consistency = (+w.consistency||0) + bump.cs;
-
-        state.awardsApplied[seg.id] = true;
-        applied++;
-      }
-    }
-  }
-
-  if (applied) saveState(state);
-  return applied;
-}
-
 /* ---------- date/age helpers (SIM-CLOCK AWARE) ---------- */
 function parseDDMMYYYY(s){
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(s||'').trim());
@@ -167,20 +128,15 @@ function snapshotOf(w){
 
 /* Namespaced snapshot reader (preferred) + legacy fallback */
 function loadPrevSnapshot(name){
-  try {
-    return JSON.parse(localStorage.getItem(nsKey(`attr::${name}`)) || 'null');
-  } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(nsKey(`attr::\${name}`)) || 'null'); } catch { return null; }
 }
-// legacy localStorage fallback (pre-snapshots.js)
 function loadPrevSnapshotLegacy(name){
-  try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::${name}`) || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(`wwf_attr_snap_v1::\${name}`) || 'null'); } catch { return null; }
 }
-
 function computeDeltas(curr, prev){
   const d = {};
   if (!prev) return d;
   for (const k of ATTR_KEYS){
-    // Only compute if baseline has this key to avoid bogus arrows
     if (Object.prototype.hasOwnProperty.call(prev, k)) {
       const a = Number(curr[k] ?? 0), b = Number(prev[k] ?? 0);
       const diff = a - b;
@@ -263,7 +219,7 @@ function statRow(label, value, key, deltas){
 
   const d = deltas ? deltas[key] : 0;
   if (d && Number.isFinite(d)){
-    const arrow = el('span',{class:`pf-delta ${d>0?'up':'down'}`, text: d>0 ? '▲' : '▼'});
+    const arrow = el('span',{class:`pf-delta \${d>0?'up':'down'}`, text: d>0 ? '▲' : '▼'});
     arrow.title = (d>0?'+':'') + d;
     right.appendChild(arrow);
   }
@@ -275,8 +231,8 @@ function statRow(label, value, key, deltas){
 /* ---------- tiny progress bar ---------- */
 function bar(label, value, max=100){
   const w=el('div',{class:'pf-progress'});
-  w.appendChild(el('div',{class:'pf-progress__label',text:`${label} (${value}/${max})`}));
-  const p=el('div',{class:'pf-progress__bar'}), f=el('div',{class:'pf-progress__fill',style:{width:`${clamp(value||0,0,max)}%`}});
+  w.appendChild(el('div',{class:'pf-progress__label',text:`\${label} (\${value}/\${max})`}));
+  const p=el('div',{class:'pf-progress__bar'}), f=el('div',{class:'pf-progress__fill',style:{width:`\${clamp(value||0,0,max)}%`}});
   p.appendChild(f); w.appendChild(p); return w;
 }
 
@@ -309,79 +265,6 @@ function isFreeAgent(brand){
   return !(brand === RAW || brand === SD || brand === 'RAW' || brand === 'SmackDown');
 }
 
-/* ---------- Retro boosts from title wins (applied once per match) ---------- */
-function ensureAwards(state){
-  if (!state.awardsApplied) state.awardsApplied = {};
-}
-function getRosterMap(state){
-  const m = new Map();
-  (state.roster||[]).forEach(w=>m.set(w.name, w));
-  return m;
-}
-function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0; }
-
-/**
- * (kept) applyRetroTitleBoosts — used to compute deltas immediately
- */
-function applyRetroTitleBoosts(state, who){
-  const applied = {}; // accumulate deltas for this profile view
-  try{
-    ensureAwards(state);
-    const rmap = getRosterMap(state);
-
-    const brands = Object.keys(state.matchHistory || {});
-    for (const brand of brands){
-      for (const wk of (state.matchHistory[brand] || [])){
-        for (const seg of (wk.segments || [])){
-          if (!seg || !seg.id) continue;
-          if (state.awardsApplied[seg.id]) continue; // already processed earlier
-          const tags = seg.tags || [];
-          if (!tags.includes('title change!')) continue;
-
-          const winners = seg.explain?.winners
-                       || state.matches?.[seg.id]?.details?.winners
-                       || [];
-          if (!winners.includes(who.name)) continue;
-
-          const names = (seg.names && seg.names.length) ? seg.names
-                       : state.matches?.[seg.id]?.names || [];
-          let oppAvg = 0;
-          if ((seg.type === 'tag') || names.length === 4){
-            const sideA = [names[0], names[1]];
-            const sideB = [names[2], names[3]];
-            const winnerIsA = sideA.some(n => winners.includes(n));
-            const oppSide = winnerIsA ? sideB : sideA;
-            oppAvg = avg(oppSide.map(n => (rmap.get(n)?.starpower ?? 60)));
-          } else if (names.length >= 2){
-            const [a, b] = names;
-            const winnerIsA = winners.includes(a);
-            const opp = rmap.get(winnerIsA ? b : a);
-            oppAvg = opp ? (opp.starpower ?? 60) : 0;
-          }
-
-          const marquee = oppAvg >= 85;
-          const incSP  = marquee ? 3 : 2;
-          const incREP = marquee ? 3 : 2;
-          const incCON = 1;
-
-          who.starpower   = clamp((who.starpower ?? 60) + incSP, 1, 99);
-          who.reputation  = clamp((who.reputation ?? 60) + incREP, 1, 99);
-          who.consistency = clamp((who.consistency ?? 60) + incCON, 1, 99);
-
-          applied.starpower   = (applied.starpower   || 0) + incSP;
-          applied.reputation  = (applied.reputation  || 0) + incREP;
-          applied.consistency = (applied.consistency || 0) + incCON;
-
-          state.awardsApplied[seg.id] = true; // remember so it's one-time
-        }
-      }
-    }
-  }catch(e){
-    console.warn('applyRetroTitleBoosts failed:', e);
-  }
-  return applied;
-}
-
 /* ---------- render ---------- */
 function renderNotFound(message){
   const root=getRoot();
@@ -399,13 +282,7 @@ function init(){
   if(!name){ renderNotFound('No wrestler specified.'); return; }
 
   const w = state.roster.find(x => x.name === name);
-  if(!w){ renderNotFound(`Profile not found for "${name}".`); return; }
-
-  const bumped = applyRetroTitleBoostsFromHistory(name);
-
-  // Apply retroactive, one-time title-win boosts and capture their deltas
-  const awardDeltas = {}; // legacy path disabled; boosts applied via history scanner
-  saveState(state);
+  if(!w){ renderNotFound(`Profile not found for "\${name}".`); return; }
 
   // sim date reference
   const nowSim = simNow(state);
@@ -414,24 +291,11 @@ function init(){
   const currSnap = snapshotOf(w);
   const baseline =
       (state.snapshots && state.snapshots.weekBaseline && state.snapshots.weekBaseline[w.name])
-   || loadPrevSnapshot(w.name)        // namespaced preferred
-   || loadPrevSnapshotLegacy(w.name); // legacy fallback
+   || loadPrevSnapshot(w.name)
+   || loadPrevSnapshotLegacy(w.name);
   const baseDeltas = computeDeltas(currSnap, baseline?.values || null);
 
-  // --- add safe ringSafety delta if baseline has it ---
   const deltas = { ...baseDeltas };
-  if (baseline?.values && typeof baseline.values.ringSafety === 'number') {
-    const rsNow = Number(w.ringSafety ?? 0);
-    const rsThen = Number(baseline.values.ringSafety ?? rsNow);
-    const rsDiff = rsNow - rsThen;
-    if (rsDiff !== 0) deltas.ringSafety = rsDiff;
-  }
-  // ----------------------------------------------------
-
-  // Merge immediate award deltas so arrows show right away (don’t wait a week)
-  for (const [k,v] of Object.entries(awardDeltas)) {
-    deltas[k] = (deltas[k] || 0) + v;
-  }
 
   const overall = overallOf(w);
 
@@ -464,9 +328,9 @@ function init(){
   const badges = el('div',{class:'pf-badges'});
   badges.appendChild(el('span',{class:'pf-badge',text:w.brand}));
   badges.appendChild(el('span',{class:'pf-badge',text:(w.gender==='F'?'Women':'Men')}));
-  badges.appendChild(el('span',{class:`pf-badge ${w.alignment==='heel'?'':'good'}`,text:w.alignment}));
+  badges.appendChild(el('span',{class:`pf-badge \${w.alignment==='heel'?'':'good'}`,text:w.alignment}));
   if (w.championOf) badges.appendChild(el('span',{class:'pf-badge good',text:w.championOf}));
-  if ((w.injuryWeeks||0)>0) badges.appendChild(el('span',{class:'pf-badge warn',text:`Injured: ${w.injuryWeeks}w`}));
+  if ((w.injuryWeeks||0)>0) badges.appendChild(el('span',{class:'pf-badge warn',text:`Injured: \${w.injuryWeeks}w`}));
   heading.appendChild(badges);
 
   const overallBox = el('div',{class:'pf-overall'});
@@ -481,7 +345,7 @@ function init(){
   // Top line info: Fatigue + Age + DOB (SIM AGE)
   const age = ageFromBirthdayAt(w.birthday, nowSim);
   wrap.appendChild(bar('Fatigue', w.fatigue ?? 0, 100));
-  wrap.appendChild(el('div',{class:'pf-progress__label', text:`Age: ${age ?? 'Unknown'} • DOB: ${w.birthday || 'Unknown'}`}));
+  wrap.appendChild(el('div',{class:'pf-progress__label', text:`Age: \${age ?? 'Unknown'} • DOB: \${w.birthday || 'Unknown'}`}));
 
   // Grid
   const grid = el('div',{class:'pf-grid'});
@@ -532,7 +396,6 @@ function init(){
     el('div',{class:'pf-row__l',text:'Injury Risk'}),
     el('div',{class:'pf-row__r'}, el('span',{text:riskTier}))
   ));
-  // NEW: show Ring Safety (mentorship-affected) with optional delta
   riskCard.appendChild(statRow('Ring Safety', w.ringSafety ?? 60, 'ringSafety', deltas));
   riskCard.appendChild(statRow('Durability', w.durability ?? 60, 'durability', deltas));
   riskCard.appendChild(statRow('Stamina', w.stamina ?? 60, 'stamina', deltas));
@@ -558,7 +421,7 @@ function init(){
   if (hotWith.length) {
     const line = el('div', { class: 'pf-info-line' });
     line.appendChild(el('span', { class: 'pf-badge good', text: 'Hot last week' }));
-    line.appendChild(el('div', { text: `vs ${hotWith.join(' / ')}` }));
+    line.appendChild(el('div', { text: `vs \${hotWith.join(' / ')}` }));
     storyCard.appendChild(line);
   }
   const stories = (state.storylines[w.brand]||[]).filter(s=>s.heat>0 && s.names.includes(w.name));
@@ -568,9 +431,9 @@ function init(){
     stories.forEach(s=>{
       const line=el('div',{class:'pf-info-line'});
       const tier = heatTier(s.heat || 0);
-      line.appendChild(heatPill(`Heat ${tier}`, tier));
+      line.appendChild(heatPill(`Heat \${tier}`, tier));
       const vs = (s.names||[]).filter(n=>n!==w.name).join(' vs ');
-      line.appendChild(el('div',{text:`${w.name} vs ${vs}`}));
+      line.appendChild(el('div',{text:`\${w.name} vs \${vs}`}));
       storyCard.appendChild(line);
     });
   }
@@ -586,14 +449,14 @@ function init(){
   const healthy = (w.injuryWeeks||0)===0;
   const retireInfo = retirementStatus(w, nowSim);
   statusCard.appendChild(el('div',{class:'pf-info-line'},
-    el('span',{class:`pf-badge ${healthy?'good':'warn'}`,text: healthy?'Available':'Unavailable'})
+    el('span',{class:`pf-badge \${healthy?'good':'warn'}`,text: healthy?'Available':'Unavailable'})
   ));
   statusCard.appendChild(el('div',{class:'pf-info-line'},
-    el('span',{class:`pf-badge ${retireInfo.cls}`,text: retireInfo.text})
+    el('span',{class:`pf-badge \${retireInfo.cls}`,text: retireInfo.text})
   ));
-  statusCard.appendChild(el('div',{class:'pf-info-line',text:`Injury: ${w.injuryWeeks||0} week(s)`}));
-  statusCard.appendChild(el('div',{class:'pf-info-line',text:`Fatigue: ${w.fatigue ?? 0}`}));
-  if (w.role) statusCard.appendChild(el('div',{class:'pf-info-line',text:`Role: ${w.role}`}));
+  statusCard.appendChild(el('div',{class:'pf-info-line',text:`Injury: \${w.injuryWeeks||0} week(s)`}));
+  statusCard.appendChild(el('div',{class:'pf-info-line',text:`Fatigue: \${w.fatigue ?? 0}`}));
+  if (w.role) statusCard.appendChild(el('div',{class:'pf-info-line',text:`Role: \${w.role}`}));
   right.appendChild(statusCard);
 
   // Contract box for Free Agents
@@ -601,63 +464,33 @@ function init(){
     const contract = card('Contract');
     contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent.'}));
 
-  const roleSel = el('select', {}, ...['wrestler', 'manager', 'mentor'].map(r => el('option', {
-    value: r,
-    text: r
-  })));
-  roleSel.value = w.role || 'wrestler';
-  const btnRaw = el('button', {
-    text: 'Sign to RAW'
-  });
-  const btnSD = el('button', {
-    text: 'Sign to SmackDown'
-  });
-  btnRaw.onclick = () => {
-    w.brand = RAW;
-    w.role = roleSel.value;
-    saveState(state);
-    location.reload();
-  };
-  btnSD.onclick = () => {
-    w.brand = SD;
-    w.role = roleSel.value;
-    saveState(state);
-    location.reload();
-  };
-  const rowBtns = el('div', {
-    class: 'pf-info-line'
-  });
-  rowBtns.appendChild(roleSel);
-  rowBtns.appendChild(btnRaw);
-  rowBtns.appendChild(btnSD);
-  contract.appendChild(rowBtns);
-  right.appendChild(contract);
+    const roleSel = el('select',{}, ...['wrestler','manager','mentor'].map(r => el('option',{value:r,text:r})));
+    roleSel.value = w.role || 'wrestler';
+    const btnRaw = el('button',{text:'Sign to RAW'});
+    const btnSD  = el('button',{text:'Sign to SmackDown'});
+    btnRaw.onclick = () => { w.brand = RAW; w.role = roleSel.value; saveState(state); location.reload(); };
+    btnSD.onclick  = () => { w.brand = SD;  w.role = roleSel.value; saveState(state); location.reload(); };
+    const rowBtns = el('div',{class:'pf-info-line'});
+    rowBtns.appendChild(roleSel);
+    rowBtns.appendChild(btnRaw);
+    rowBtns.appendChild(btnSD);
+    contract.appendChild(rowBtns);
+    right.appendChild(contract);
   }
+
+  // Bio & Style
   const bioCard = card('Bio & Style');
-  const info = el('div', {
-    class: 'pf-info-grid'
-  });
-  info.appendChild(el('div', {
-    class: 'pf-info-line',
-    text: Birthday: $ {
-    w.birthday || 'Unknown'
-  }
-                      }));
-  info.appendChild(el('div', {
-    class: 'pf-info-line',
-    text: Style Tags: $ {
-    (w.styleTags?.length ? w.styleTags.join(', ') : 'None')
-  }
-  }));
+  const info = el('div',{class:'pf-info-grid'});
+  info.appendChild(el('div',{class:'pf-info-line',text:`Birthday: \${w.birthday || 'Unknown'}`}));
+  info.appendChild(el('div',{class:'pf-info-line', text:`Style Tags: \${ (w.styleTags?.length? w.styleTags.join(', ') : 'None') }`}));
   bioCard.appendChild(info);
   right.appendChild(bioCard);
+
+  // Mount
   grid.appendChild(left);
   grid.appendChild(right);
   wrap.appendChild(grid);
   root.appendChild(wrap);
-  }
-  try {
-    init();
-  } catch (e) {
-    bootError(e.message, e);
-  }
+}
+
+try { init(); } catch(e){ bootError(e.message, e); }
