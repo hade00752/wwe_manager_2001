@@ -15,7 +15,7 @@ export { aiBooking } from './engine/ai.js';
 export { runShow } from './engine/runShow.js';
 export { applyWeeklyProgression } from './engine/progression.js';
 export { processRetirements }    from './engine/retirement.js';
-export { simNow, simDateString, advanceSimWeek } from './engine/state_mgmt.js';
+export { simNow, simDateString, advanceSimWeek, nsKey } from './engine/state_mgmt.js';
 
 // In case other pages import helpers
 export {

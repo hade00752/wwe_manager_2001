@@ -3,7 +3,7 @@
 export { defaultState, loadState, saveState, ensureInitialised, newSeason } from './state_mgmt.js';
 export { aiBooking } from './ai.js';
 export { runShow } from './runShow.js';
-export { simNow, simDateString, advanceSimWeek } from './state_mgmt.js';
+export { simNow, simDateString, advanceSimWeek, nsKey } from './state_mgmt.js';
 
 // helpers others rely on
 export {
