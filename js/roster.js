@@ -1,5 +1,5 @@
 // public/js/roster.js
-// Unified roster view + search, with safe guards when no save exists.
+// Unified roster view + search, with safe guards and brand fallbacks.
 
 import { RAW, SD, FA, el, clamp } from "./util.js";
 import { loadState, ensureInitialised, headshotImg } from "./engine.js";
@@ -37,7 +37,7 @@ const root =
              box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; }
   .ro-actions{ display:flex; gap:8px; margin-top:10px; }
   .btn{ background: rgba(14,22,48,.82); color: #e9eef8; border:1px solid rgba(140,180,255,.35);
-        border-radius:12px; padding:10px 12px; cursor:pointer; }
+        border-radius:12px; padding:10px 12px; cursor:pointer; text-decoration:none; }
   .btn:hover{ box-shadow: 0 0 0 1px rgba(140,180,255,.55), 0 0 16px rgba(140,180,255,.18); }
   `;
   document.head.appendChild(s);
@@ -47,14 +47,14 @@ const root =
 function calcOverall(w) {
   const promoLike = ((w.charisma ?? w.promo ?? 60) + (w.mic ?? w.promo ?? 60)) / 2;
   const psych = w.psychology ?? 60;
-  const cons = w.consistency ?? 60;
+  const cons  = w.consistency ?? 60;
   const o = Math.round(
     (w.workrate ?? 60) * 0.30 +
-      (w.starpower ?? 60) * 0.25 +
-      promoLike * 0.15 +
-      (w.momentum ?? 60) * 0.10 +
-      psych * 0.10 +
-      cons * 0.10
+    (w.starpower ?? 60) * 0.25 +
+    promoLike * 0.15 +
+    (w.momentum ?? 60) * 0.10 +
+    psych * 0.10 +
+    cons * 0.10
   );
   return clamp(o, 1, 99);
 }
@@ -87,10 +87,7 @@ function getStateOrExplain() {
     const actions = el(
       "div",
       { class: "ro-actions" },
-      (() => {
-        const btn = el("a", { class: "btn", text: "Go to Booking", href: "booking.html" });
-        return btn;
-      })()
+      el("a", { class: "btn", text: "Go to Booking", href: "booking.html" })
     );
     empty.appendChild(actions);
     wrap.appendChild(empty);
@@ -112,8 +109,7 @@ function rowFor(w) {
   const href = `${PROFILE_PATH}?name=${encodeURIComponent(w.name)}`;
 
   const pic = el("div", { class: "ro-img" });
-  const img = headshotImg(w.name, { width: 48, height: 48, alt: w.name });
-  pic.appendChild(img);
+  pic.appendChild(headshotImg(w.name, { width: 48, height: 48, alt: w.name }));
   r.appendChild(pic);
 
   const name = el("a", { class: "ro-name ro-link", text: w.name, href });
@@ -145,9 +141,31 @@ function render() {
   head.appendChild(search);
   wrap.appendChild(head);
 
-  // Unified sorted list (A–Z by name)
+  // Build the list with robust fallbacks:
+  // 1) Prefer state.roster if it's an array with items
+  // 2) Otherwise flatten brand buckets state[RAW], state[SD], state[FA]
+  let all = [];
+  if (Array.isArray(state.roster) && state.roster.length) {
+    all = [...state.roster];
+  } else {
+    const raw = Array.isArray(state[RAW]) ? state[RAW] : [];
+    const sd  = Array.isArray(state[SD])  ? state[SD]  : [];
+    const fa  = Array.isArray(state[FA])  ? state[FA]  : [];
+    all = [...raw, ...sd, ...fa];
+  }
+
+  // If still empty, explain gently instead of a blank page
   const list = el("div", { class: "ro-list" });
-  const all = [...(state.roster || [])].sort((a, b) => a.name.localeCompare(b.name));
+  if (!all.length) {
+    list.appendChild(
+      el("div", { class: "ro-empty", text: "No wrestlers found in this save yet." })
+    );
+    wrap.appendChild(list);
+    root.appendChild(wrap);
+    return;
+  }
+
+  all.sort((a, b) => a.name.localeCompare(b.name));
   let current = all;
 
   function refresh() {
