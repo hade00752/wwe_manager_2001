@@ -1,15 +1,21 @@
 // public/js/roster.js
-// Unified, minimal roster view + search.
+// Unified roster view + search, with safe guards when no save exists.
 
-import { RAW, SD, FA, el, clamp } from "./util.js?v=1755554537";
-import { loadState, ensureInitialised, headshotImg } from "./engine.js?v=1755554537";
+import { RAW, SD, FA, el, clamp } from "./util.js";
+import { loadState, ensureInitialised, headshotImg } from "./engine.js";
 
-const root = document.getElementById('roster-root') || (() => {
-  const m = document.createElement('main'); m.id = 'roster-root'; document.body.appendChild(m); return m;
-})();
+const root =
+  document.getElementById("roster-root") ||
+  (() => {
+    const m = document.createElement("main");
+    m.id = "roster-root";
+    document.body.appendChild(m);
+    return m;
+  })();
 
-(function injectStyles(){
-  const s = document.createElement('style');
+/* ---------------- styles ---------------- */
+(function injectStyles() {
+  const s = document.createElement("style");
   s.textContent = `
   .ro-wrap{ display:grid; gap:16px; }
   .ro-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -27,82 +33,132 @@ const root = document.getElementById('roster-root') || (() => {
   .ro-img{ width:48px; height:48px; border-radius:10px; overflow:hidden; box-shadow:0 0 0 1px rgba(255,255,255,.1) inset; }
   .ro-img > img{ width:48px; height:48px; object-fit:cover; display:block; }
   .ro-link{ color:inherit; text-decoration:none; }
+  .ro-empty{ padding:14px; border-radius:12px; background:rgba(255,255,255,.03);
+             box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; }
+  .ro-actions{ display:flex; gap:8px; margin-top:10px; }
+  .btn{ background: rgba(14,22,48,.82); color: #e9eef8; border:1px solid rgba(140,180,255,.35);
+        border-radius:12px; padding:10px 12px; cursor:pointer; }
+  .btn:hover{ box-shadow: 0 0 0 1px rgba(140,180,255,.55), 0 0 16px rgba(140,180,255,.18); }
   `;
   document.head.appendChild(s);
 })();
 
-function calcOverall(w){
+/* ---------------- helpers ---------------- */
+function calcOverall(w) {
   const promoLike = ((w.charisma ?? w.promo ?? 60) + (w.mic ?? w.promo ?? 60)) / 2;
   const psych = w.psychology ?? 60;
-  const cons  = w.consistency ?? 60;
+  const cons = w.consistency ?? 60;
   const o = Math.round(
-    (w.workrate ?? 60)*0.30 + (w.starpower ?? 60)*0.25 +
-    promoLike*0.15 + (w.momentum ?? 60)*0.10 + psych*0.10 + cons*0.10
+    (w.workrate ?? 60) * 0.30 +
+      (w.starpower ?? 60) * 0.25 +
+      promoLike * 0.15 +
+      (w.momentum ?? 60) * 0.10 +
+      psych * 0.10 +
+      cons * 0.10
   );
   return clamp(o, 1, 99);
 }
 
-function brandPill(brand){
-  const b = (brand===RAW) ? 'raw' : (brand===SD) ? 'sd' : 'fa';
-  const t = (brand===RAW) ? 'RAW' : (brand===SD) ? 'SmackDown' : 'Free Agent';
-  return el('span', { class:`pill brand ${b}`, text:t });
+function brandPill(brand) {
+  const b = brand === RAW ? "raw" : brand === SD ? "sd" : "fa";
+  const t = brand === RAW ? "RAW" : brand === SD ? "SmackDown" : "Free Agent";
+  return el("span", { class: `pill brand ${b}`, text: t });
 }
 
-// Use pretty URL always; server serves /profile for the profile page
+// Pretty URL path for profile pages
 const PROFILE_PATH = "profile.html";
 
-function rowFor(w){
-  const r = el('div', { class:'ro-row' });
+/* Safe state getter: renders friendly message if there is no save yet */
+function getStateOrExplain() {
+  const state = loadState();
+  if (!state) {
+    root.innerHTML = "";
+    const wrap = el("div", { class: "ro-wrap" });
+
+    wrap.appendChild(el("h3", { text: "Roster" }));
+    const empty = el(
+      "div",
+      { class: "ro-empty" },
+      el("div", {
+        text:
+          "No season found. Go to Booking and press “Start New Season” to create a save, then return to the Roster page.",
+      })
+    );
+    const actions = el(
+      "div",
+      { class: "ro-actions" },
+      (() => {
+        const btn = el("a", { class: "btn", text: "Go to Booking", href: "booking.html" });
+        return btn;
+      })()
+    );
+    empty.appendChild(actions);
+    wrap.appendChild(empty);
+    root.appendChild(wrap);
+    return null;
+  }
+  try {
+    ensureInitialised(state);
+  } catch {
+    // If anything throws, keep going with the raw state to avoid blanking the page
+  }
+  return state;
+}
+
+/* Row builder */
+function rowFor(w) {
+  const r = el("div", { class: "ro-row" });
 
   const href = `${PROFILE_PATH}?name=${encodeURIComponent(w.name)}`;
 
-  const pic = el('div',{class:'ro-img'});
-  pic.appendChild(headshotImg(w.name, { width:48, height:48 }));
+  const pic = el("div", { class: "ro-img" });
+  const img = headshotImg(w.name, { width: 48, height: 48, alt: w.name });
+  pic.appendChild(img);
   r.appendChild(pic);
 
-  const name = el('a', { class:'ro-name ro-link', text:w.name, href });
+  const name = el("a", { class: "ro-name ro-link", text: w.name, href });
   r.appendChild(name);
 
   r.appendChild(brandPill(w.brand));
-  r.appendChild(el('div', { class:'ro-ov', text:String(calcOverall(w)) }));
+  r.appendChild(el("div", { class: "ro-ov", text: String(calcOverall(w)) }));
 
-  // Make the whole row clickable while keeping the anchor accessible
-  r.addEventListener('click', (e)=>{
-    // Don’t double-handle when clicking the anchor itself
+  // Make the whole row clickable; keep the anchor accessible
+  r.addEventListener("click", (e) => {
     if (!(e.target instanceof HTMLAnchorElement)) window.location.href = href;
   });
 
   return r;
 }
 
-function render(){
-  const state = loadState();
-  ensureInitialised(state);
+/* ---------------- render ---------------- */
+function render() {
+  const state = getStateOrExplain();
+  if (!state) return;
 
-  root.innerHTML = '';
-  const wrap = el('div',{class:'ro-wrap'});
+  root.innerHTML = "";
+  const wrap = el("div", { class: "ro-wrap" });
 
-  // header with search
-  const head = el('div',{class:'ro-head'});
-  head.appendChild(el('h3',{text:'Roster'}));
-  const search = el('input',{class:'ro-search', type:'search', placeholder:'Search roster…'});
+  // Header + search
+  const head = el("div", { class: "ro-head" });
+  head.appendChild(el("h3", { text: "Roster" }));
+  const search = el("input", { class: "ro-search", type: "search", placeholder: "Search roster…" });
   head.appendChild(search);
   wrap.appendChild(head);
 
-  // unified sorted list
-  const list = el('div',{class:'ro-list'});
-  const all = [...state.roster].sort((a,b)=>a.name.localeCompare(b.name));
+  // Unified sorted list (A–Z by name)
+  const list = el("div", { class: "ro-list" });
+  const all = [...(state.roster || [])].sort((a, b) => a.name.localeCompare(b.name));
   let current = all;
 
-  function refresh(){
-    list.innerHTML = '';
-    current.forEach(w => list.appendChild(rowFor(w)));
+  function refresh() {
+    list.innerHTML = "";
+    current.forEach((w) => list.appendChild(rowFor(w)));
   }
   refresh();
 
-  search.addEventListener('input', ()=>{
+  search.addEventListener("input", () => {
     const q = search.value.trim().toLowerCase();
-    current = !q ? all : all.filter(w => w.name.toLowerCase().includes(q));
+    current = !q ? all : all.filter((w) => w.name.toLowerCase().includes(q));
     refresh();
   });
 
@@ -110,4 +166,18 @@ function render(){
   root.appendChild(wrap);
 }
 
-try { render(); } catch(e){ console.error(e); }
+/* ---------------- boot ---------------- */
+try {
+  render();
+} catch (e) {
+  // Last-resort error surface so the page never silently fails
+  root.innerHTML = "";
+  const pre = document.createElement("pre");
+  pre.style.whiteSpace = "pre-wrap";
+  pre.style.fontFamily = "ui-monospace, Menlo, Consolas, monospace";
+  pre.style.padding = "12px";
+  pre.style.border = "1px solid #444";
+  pre.style.borderRadius = "10px";
+  pre.textContent = "[Roster load error]\n" + (e?.stack || e?.message || String(e));
+  root.appendChild(pre);
+}
