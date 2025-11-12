@@ -1,9 +1,10 @@
 // public/js/sim_clock.js
-import { loadState, ensureInitialised, simDateString } from "./engine.js?v=1755554537";
+import { loadState, ensureInitialised, simDateString, saveState } from "./engine.js?v=1755554537";
 
 function inject(){
   const state = loadState(); if (!state) return;
   ensureInitialised(state);
+  saveState(state);
 
   const pill = document.createElement('span');
   pill.className = 'pill';

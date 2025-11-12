@@ -1,7 +1,10 @@
 // public/js/profile.js — stable profile with baseline deltas and no undefined calls
 
 import { el, clamp, RAW, SD } from "./util.js";
-import { loadState, ensureInitialised, headshotImg, saveState, nsKey } from "./engine.js";
+import {
+  loadState, ensureInitialised, headshotImg, saveState, nsKey,
+  offerContract, extendContract, estimateContractValue
+} from "./engine.js";
 
 /* ---------- boot error ---------- */
 function bootError(msg, err){
@@ -36,6 +39,12 @@ function initialAvatarText(name){
   const parts = String(name).trim().split(/\s+/);
   if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
   return (parts[0][0]+parts[1][0]).toUpperCase();
+}
+
+function formatMoney(n){
+  const sign = n < 0 ? '-' : '';
+  const val = Math.abs(Math.round(Number(n) || 0)).toLocaleString();
+  return `${sign}$${val}`;
 }
 
 /* ---------- date/age (SIM CLOCK) ---------- */
@@ -269,6 +278,7 @@ function init(){
   const state = loadState();
   if(!state){ renderNotFound('No season found. Go to Booking to start a new season.'); return; }
   ensureInitialised(state);
+  saveState(state);
 
   const name = qparam('name');
   if(!name){ renderNotFound('No wrestler specified.'); return; }
@@ -447,23 +457,95 @@ function init(){
   statusCard.appendChild(el('div',{class:'pf-info-line',text:`Injury: ${w.injuryWeeks||0} week(s)`}));
   statusCard.appendChild(el('div',{class:'pf-info-line',text:`Fatigue: ${w.fatigue ?? 0}`}));
   if (w.role) statusCard.appendChild(el('div',{class:'pf-info-line',text:`Role: ${w.role}`}));
+  if (w.contract){
+    if (isFreeAgent(w.brand)){
+      statusCard.appendChild(el('div',{class:'pf-info-line',text:'Contract: Free Agent'}));
+    } else {
+      statusCard.appendChild(el('div',{class:'pf-info-line',text:`Contract: ${formatMoney(w.contract.salary)}/wk — ${w.contract.weeksRemaining} week(s) left`}));
+    }
+  }
   right.appendChild(statusCard);
 
   // Contract box for Free Agents
   if (isFreeAgent(w.brand)) {
     const contract = card('Contract');
-    contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent.'}));
-    const roleSel = el('select',{}, ...['wrestler','manager','mentor'].map(r => el('option',{value:r,text:r})));
-    roleSel.value = w.role || 'wrestler';
+    const recommended = estimateContractValue(w);
+    contract.appendChild(el('div',{class:'pf-info-line', text:'This talent is a Free Agent. Offer a deal to bring them in.'}));
+
+    const roleSel = el('select',{},
+      el('option',{value:'active', text:'Wrestler'}),
+      el('option',{value:'manager', text:'Manager'}),
+      el('option',{value:'mentor', text:'Mentor'})
+    );
+    roleSel.value = (w.role === 'manager' || w.role === 'mentor') ? w.role : 'active';
+
+    const lenSel = el('select',{},
+      el('option',{value:'26', text:'26 weeks'}),
+      el('option',{value:'52', text:'52 weeks'}),
+      el('option',{value:'13', text:'13 weeks'})
+    );
+    lenSel.value = '52';
+
+    const salaryInput = el('input',{type:'number', min:'1200', step:'250', value:String(recommended)});
+
+    const controls = el('div',{class:'pf-info-grid'});
+    controls.appendChild(el('div',{class:'pf-info-line', text:`Suggested salary: ${formatMoney(recommended)}/week`}));
+    controls.appendChild(el('div',{class:'pf-info-line'}, el('label',{text:'Offer length'}), lenSel));
+    controls.appendChild(el('div',{class:'pf-info-line'}, el('label',{text:'Weekly salary'}), salaryInput));
+    controls.appendChild(el('div',{class:'pf-info-line'}, el('label',{text:'Role'}), roleSel));
+    contract.appendChild(controls);
+
+    const btnRow = el('div',{class:'pf-info-line'});
     const btnRaw = el('button',{text:'Sign to RAW'});
     const btnSD  = el('button',{text:'Sign to SmackDown'});
-    btnRaw.onclick = () => { w.brand = RAW; w.role = roleSel.value; saveState(state); location.reload(); };
-    btnSD.onclick  = () => { w.brand = SD;  w.role = roleSel.value; saveState(state); location.reload(); };
-    const rowBtns = el('div',{class:'pf-info-line'});
-    rowBtns.appendChild(roleSel);
-    rowBtns.appendChild(btnRaw);
-    rowBtns.appendChild(btnSD);
-    contract.appendChild(rowBtns);
+    const sign = (brand)=>{
+      const weeks = Number(lenSel.value);
+      const salary = Number(salaryInput.value);
+      const ok = offerContract(state, w.name, brand, { weeks, salary, role: roleSel.value });
+      if (ok){
+        saveState(state);
+        location.replace(`profile.html?name=${encodeURIComponent(w.name)}`);
+      } else {
+        alert('Offer could not be completed.');
+      }
+    };
+    btnRaw.onclick = () => sign(RAW);
+    btnSD.onclick  = () => sign(SD);
+    btnRow.append(btnRaw, btnSD);
+    contract.appendChild(btnRow);
+    right.appendChild(contract);
+  } else if (w.contract) {
+    const contract = card('Contract');
+    contract.appendChild(el('div',{class:'pf-info-line', text:`Weekly salary: ${formatMoney(w.contract.salary)}`}));
+    contract.appendChild(el('div',{class:'pf-info-line', text:`Weeks remaining: ${w.contract.weeksRemaining}`}));
+
+    const lenSel = el('select',{},
+      el('option',{value:'13', text:'Add 13 weeks'}),
+      el('option',{value:'26', text:'Add 26 weeks'}),
+      el('option',{value:'52', text:'Add 52 weeks'})
+    );
+    lenSel.value = '26';
+
+    const salaryInput = el('input',{type:'number', min:'1200', step:'250', value:String(w.contract.salary)});
+
+    const controls = el('div',{class:'pf-info-grid'});
+    controls.appendChild(el('div',{class:'pf-info-line'}, el('label',{text:'Extend by'}), lenSel));
+    controls.appendChild(el('div',{class:'pf-info-line'}, el('label',{text:'New weekly salary'}), salaryInput));
+    contract.appendChild(controls);
+
+    const extendBtn = el('button',{text:'Offer Extension'});
+    extendBtn.onclick = () => {
+      const weeks = Number(lenSel.value);
+      const salary = Number(salaryInput.value);
+      const ok = extendContract(state, w.name, weeks, salary);
+      if (ok){
+        saveState(state);
+        location.replace(`profile.html?name=${encodeURIComponent(w.name)}`);
+      } else {
+        alert('Extension could not be completed.');
+      }
+    };
+    contract.appendChild(el('div',{class:'pf-info-line'}, extendBtn));
     right.appendChild(contract);
   }
 
