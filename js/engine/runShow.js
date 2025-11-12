@@ -1,13 +1,13 @@
 // public/js/engine/runShow.js
 import {
   SEGMENTS, SEGMENT_WEIGHTS, TITLE_ALLOWED_ON,
-  REPEAT_PENALTY, STORY_HOT_THRESHOLD, STORY_PROMO_BONUS, STORY_HEAT_ON_HOT,
+  REPEAT_PENALTY, STORY_PROMO_BONUS,
   TV, clamp, el, setEq, avg, r
 } from '../util.js';
 import { HOT, CROWD, MAIN_EVENT, FATIGUE, INJURY } from './constants.js';
 import { getW, byBrand, keyFromNames } from './helpers.js';
 import { simulateMatch } from './simulate.js';
-import { addOrBoostStory, getStory, decayStories, inAnyStory } from './story.js';
+import { applyStoryProgression, applyStoryEcosystemEffects, getStory, decayStories, inAnyStory } from './story.js';
 import { decayAllChemistry } from './chemistry.js';
 import { applyChampionAuraDrift } from './champions.js';
 import {
@@ -111,7 +111,6 @@ export function runShow(state, brand, booking){
   let showScore = 0;
 
   const weekKeys = [];
-  const hotPairs = [];
   const lastKeys = state.lastWeekKeys[brand] || [];
   let openerScore = null, mainEventScore = null;
   let matchScores = [];
@@ -171,32 +170,61 @@ export function runShow(state, brand, booking){
       tags = simRes.tags || [];
 
       const namesArr = [A.name, B.name];
+      const pairings = [[A.name, B.name]];
       const k = keyFromNames(namesArr);
       summary = matchSummary(segScore, namesArr, tags);
 
       weekKeys.push(k);
       usedNames.add(A.name); usedNames.add(B.name);
 
-      if (segScore >= STORY_HOT_THRESHOLD) hotPairs.push(namesArr);
-
-      // Hot-match immunity + small story kick
-      if (isHotSingles(A, B, segScore)) {
+      const wasHot = isHotSingles(A, B, segScore);
+      if (wasHot) {
         tags.push("hot match");
         state.hotMatches[k] = { ttl: HOT.TTL };
-        addOrBoostStory(state, brand, namesArr, Math.ceil(STORY_HEAT_ON_HOT/2));
       }
 
-      // Repeat penalty (respects one-week hot immunity)
+      let repeatPenaltyApplied = 0;
       const isRepeat = lastKeys.includes(k);
       const hasImmunity = !!state.hotMatches[k];
       if (isRepeat && !hasImmunity) {
         const hasStory = !!getStory(state, brand, namesArr);
         const pen = Math.round(segScore * (hasStory ? REPEAT_PENALTY / 2 : REPEAT_PENALTY));
         segScore -= pen;
+        repeatPenaltyApplied = pen;
         tags.push(`repeat -${pen}${hasStory ? ' (story)' : ''}`);
         if (det) det.repeatPenalty = pen;
       } else if (isRepeat && hasImmunity) {
         tags.push("hot rematch (no penalty)");
+      }
+
+      const winners = (simRes?.explain?.winners || []).slice();
+      const storyProgress = applyStoryProgression(state, brand, namesArr, {
+        rating: segScore,
+        hot: wasHot,
+        repeatPenalty: repeatPenaltyApplied
+      });
+      if (storyProgress) {
+        if (storyProgress.delta > 0) tags.push(`story heat +${storyProgress.delta}`);
+        else if (storyProgress.delta < 0) tags.push(`story heat ${storyProgress.delta}`);
+
+        const eco = applyStoryEcosystemEffects(state, brand, storyProgress, {
+          rating: segScore,
+          winners,
+          participants: namesArr,
+          pairings
+        });
+        if (det) {
+          det.storyHeat = {
+            before: storyProgress.before,
+            after: storyProgress.after,
+            delta: storyProgress.delta,
+            applied: storyProgress.appliedDelta,
+            tier: eco?.tier ?? null,
+            tierDelta: eco?.tierDelta ?? null,
+            morale: eco?.moraleChanges || null,
+            rivalry: eco?.rivalryChanges || null
+          };
+        }
       }
 
       // Hashed match ID
@@ -237,29 +265,61 @@ export function runShow(state, brand, booking){
       tags = simRes.tags || [];
 
       const namesArr = [A1.name, A2.name, B1.name, B2.name];
+      const pairings = [[A1.name, B1.name], [A2.name, B2.name]];
       const k = keyFromNames(namesArr);
       summary = matchSummary(segScore, namesArr, tags);
 
       weekKeys.push(k);
       [A1, A2, B1, B2].forEach(w => usedNames.add(w.name));
 
-      if (segScore >= STORY_HOT_THRESHOLD) hotPairs.push(namesArr);
-
-      if (isHotTag(A1, A2, B1, B2, segScore)) {
+      const wasHot = isHotTag(A1, A2, B1, B2, segScore);
+      if (wasHot) {
         tags.push("hot match");
         state.hotMatches[k] = { ttl: HOT.TTL };
       }
 
+      let repeatPenaltyApplied = 0;
       const isRepeat = lastKeys.includes(k);
       const hasImmunity = !!state.hotMatches[k];
       if (isRepeat && !hasImmunity) {
         const hasStory = !!getStory(state, brand, namesArr);
         const pen = Math.round(segScore * (hasStory ? REPEAT_PENALTY / 2 : REPEAT_PENALTY));
         segScore -= pen;
+        repeatPenaltyApplied = pen;
         tags.push(`repeat -${pen}${hasStory ? ' (story)' : ''}`);
         if (det) det.repeatPenalty = pen;
       } else if (isRepeat && hasImmunity) {
         tags.push("hot rematch (no penalty)");
+      }
+
+      const winners = (simRes?.explain?.winners || []).slice();
+      const storyProgress = applyStoryProgression(state, brand, namesArr, {
+        rating: segScore,
+        hot: wasHot,
+        repeatPenalty: repeatPenaltyApplied
+      });
+      if (storyProgress) {
+        if (storyProgress.delta > 0) tags.push(`story heat +${storyProgress.delta}`);
+        else if (storyProgress.delta < 0) tags.push(`story heat ${storyProgress.delta}`);
+
+        const eco = applyStoryEcosystemEffects(state, brand, storyProgress, {
+          rating: segScore,
+          winners,
+          participants: namesArr,
+          pairings
+        });
+        if (det) {
+          det.storyHeat = {
+            before: storyProgress.before,
+            after: storyProgress.after,
+            delta: storyProgress.delta,
+            applied: storyProgress.appliedDelta,
+            tier: eco?.tier ?? null,
+            tierDelta: eco?.tierDelta ?? null,
+            morale: eco?.moraleChanges || null,
+            rivalry: eco?.rivalryChanges || null
+          };
+        }
       }
 
       // Hashed match ID
@@ -329,7 +389,6 @@ export function runShow(state, brand, booking){
   }
 
   // Storylines & chemistry decay
-  hotPairs.forEach(names => addOrBoostStory(state, brand, names, STORY_HEAT_ON_HOT));
   decayStories(state);
   decayAllChemistry(state);
   decayRelationships(state);

@@ -5,6 +5,8 @@ import { setChampionFlags, stripCrossBrandTitles } from './champions.js';
 import { men, women, pickTop, pairForTag, uniqSorted, byBrand } from './helpers.js';
 import { defaultRelationships, seedEra2000 } from './relationships.js';
 import { pushMail } from './mail.js';
+import { defaultFinances, ensureFinances } from './finances.js';
+import { ensureContract } from './contracts.js';
 
 /* ────────────────────────────── storage keys ───────────────────────────── */
 
@@ -82,7 +84,8 @@ export function defaultState(brand = RAW){
         { mentor:null, mentees:[] },
         { mentor:null, mentees:[] }
       ]
-    }
+    },
+    finances: defaultFinances(),
   };
 }
 
@@ -183,6 +186,23 @@ export function simDateString(state){
 }
 export function advanceSimWeek(state, n=1){
   state.week = Math.max(1, (state.week||1) + n);
+
+  const afterglow = state.afterglow;
+  const ttl = afterglow && afterglow.ttl;
+  if (ttl && typeof ttl === 'object') {
+    for (const brand of [RAW, SD]) {
+      const current = Number(ttl[brand]);
+      if (!Number.isFinite(current) || current <= 0) {
+        ttl[brand] = 0;
+        if (afterglow && Number(afterglow[brand]) !== 0) afterglow[brand] = 0;
+        continue;
+      }
+
+      const remaining = Math.max(0, current - Math.max(1, Math.round(n)));
+      ttl[brand] = remaining;
+      if (remaining === 0 && afterglow) afterglow[brand] = 0;
+    }
+  }
 }
 
 /* ────────────────────────── storyline normaliser ─────────────────────── */
@@ -193,6 +213,12 @@ function normalizeStory(s){
     s = { names:[...s.set], heat:s.heat||0, weeks:s.weeks||0 };
   }
   if(Array.isArray(s.names)) s.names = uniqSorted(s.names);
+  s.heat = clamp(Math.max(0, Math.round(Number(s.heat ?? 0))), 0, 100);
+  s.weeks = Math.max(0, Math.round(Number(s.weeks ?? 0)));
+  if (!Number.isFinite(s.lastScore)) s.lastScore = 0;
+  else s.lastScore = Math.round(s.lastScore);
+  if (!Number.isFinite(s.lastDelta)) s.lastDelta = 0;
+  else s.lastDelta = Math.round(s.lastDelta);
   return s;
 }
 
@@ -353,9 +379,12 @@ export function ensureInitialised(state){
     });
 
     w.morale = clamp(Math.round(w.morale ?? 65), 0, 100);
+
+    ensureContract(w);
   });
 
   setChampionFlags(state);
+  ensureFinances(state);
   return state;
 }
 

@@ -1,7 +1,7 @@
 // public/js/nav.js
 // Global sticky nav with active-tab highlight + sim date pill.
 
-import { loadState, ensureInitialised, simDateString } from "./engine.js?v=1755554537";
+import { loadState, ensureInitialised, simDateString, ensureFinances, financeTotals, formatMoney, saveState } from "./engine.js?v=1755554537";
 
 (function injectNavStyles(){
   if (document.getElementById('global-nav-styles')) return;
@@ -74,11 +74,23 @@ function renderNav(){
   const state = loadState();
   if (state){
     ensureInitialised(state);
+    ensureFinances(state);
+    saveState(state);
     const pill = document.createElement('span');
     pill.className = 'pill';
     pill.id = 'sim-date-pill';
     pill.textContent = simDateString(state);
     row.appendChild(pill);
+
+    const brand = state.brand || 'RAW';
+    const totals = financeTotals(state, brand);
+    if (totals){
+      const cashPill = document.createElement('span');
+      cashPill.className = 'pill';
+      cashPill.id = 'finance-pill';
+      cashPill.textContent = `Cash: ${formatMoney(totals.cash)}`;
+      row.appendChild(cashPill);
+    }
   }
 
   header.appendChild(row);
@@ -102,6 +114,13 @@ if (document.readyState === 'loading'){
 export function refreshSimDatePill(){
   const state = loadState(); if (!state) return;
   ensureInitialised(state);
+  ensureFinances(state);
+  saveState(state);
   const el = document.getElementById('sim-date-pill');
   if (el) el.textContent = simDateString(state);
+  const cash = document.getElementById('finance-pill');
+  if (cash){
+    const totals = financeTotals(state, state.brand || 'RAW');
+    cash.textContent = `Cash: ${formatMoney(totals.cash)}`;
+  }
 }
