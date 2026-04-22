@@ -1,0 +1,222 @@
+/* public/css/theme-2002.css */
+:root{
+  --bg0:#030716;
+  --bg1:#071336;
+
+  --ink:#cfe6ff;
+  --muted:#8fb0cc;
+
+  --panel0:#071a52;
+  --panel1:#030a22;
+
+  --line: rgba(120, 200, 255, .22);
+  --line2: rgba(120, 200, 255, .10);
+
+  --cyan: rgba(120, 240, 255, 1);
+  --cyanSoft: rgba(120, 240, 255, .55);
+  --cyanDim: rgba(120, 240, 255, .20);
+
+  --shadow: rgba(0,0,0,.55);
+  --glow: rgba(120,240,255,.25);
+
+  --radius: 18px;
+  --radius2: 26px;
+
+  --font: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  --capsTrack: .08em;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:var(--font);
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% 40%, rgba(60,130,255,.22), transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+  overflow-x:hidden;
+}
+
+/* === “PS2 menu” texture layers === */
+.ui-bg{
+  position:fixed;
+  inset:0;
+  z-index:-10;
+  pointer-events:none;
+}
+.ui-bg::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    /* HEX GRID */
+    repeating-linear-gradient(60deg, var(--line) 0 2px, transparent 2px 48px),
+    repeating-linear-gradient(-60deg, var(--line) 0 2px, transparent 2px 48px),
+    repeating-linear-gradient(0deg, var(--line2) 0 2px, transparent 2px 48px);
+  opacity:.35;
+  filter: blur(.0px);
+  transform: translateZ(0);
+}
+.ui-bg::after{
+  content:"";
+  position:absolute; inset:0;
+  /* scanlines + faint noise */
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255,255,255,.035) 0px,
+      rgba(255,255,255,.02) 1px,
+      rgba(0,0,0,0) 3px,
+      rgba(0,0,0,0) 6px
+    );
+  opacity:.25;
+  mix-blend-mode: overlay;
+}
+
+/* centered stage */
+.ui-stage{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:32px 18px;
+}
+
+.ui-shell{
+  width:min(520px, 92vw);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+}
+
+/* portrait tile */
+.portrait-tile{
+  width: 270px;
+  height: 270px;
+  position:relative;
+  border-radius: 6px; /* screenshot is more square than rounded */
+  background: linear-gradient(180deg, #0a2aa0 0%, #071a52 50%, #040b24 100%);
+  box-shadow:
+    0 14px 30px var(--shadow),
+    0 0 0 3px rgba(190,220,255,.18),
+    0 0 0 8px rgba(0,0,0,.18);
+  overflow:hidden;
+}
+
+.portrait-tile .portrait-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  opacity:.98;
+}
+
+.portrait-tile .qmark{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-size:92px;
+  font-weight:800;
+  letter-spacing:.02em;
+  color: rgba(190,220,255,.22);
+  text-shadow: 0 8px 18px rgba(0,0,0,.35);
+}
+
+.portrait-tile .p1{
+  position:absolute;
+  left:12px;
+  bottom:10px;
+  font-weight:800;
+  font-size:28px;
+  color: rgba(160,220,255,.9);
+  text-shadow:
+    0 2px 0 rgba(0,0,0,.35),
+    0 0 12px rgba(120,240,255,.15);
+}
+
+/* list */
+.menu-list{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  margin-top:2px;
+}
+
+.menu-item{
+  width:100%;
+  text-align:center;
+  font-weight:800;
+  letter-spacing: var(--capsTrack);
+  text-transform:uppercase;
+  color: rgba(220,240,255,.75);
+  font-size:26px;
+  line-height:1.15;
+  padding: 10px 10px;
+  user-select:none;
+  cursor:pointer;
+  text-shadow: 0 3px 10px rgba(0,0,0,.35);
+}
+
+.menu-item.is-dim{ color: rgba(220,240,255,.45); }
+
+.menu-item.is-active{
+  position:relative;
+  color: rgba(240,252,255,.95);
+  padding: 14px 16px;
+}
+
+/* glowing pill outline */
+.menu-item.is-active::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform: translate(-50%,-50%);
+  width: 92%;
+  height: 54px;
+  border-radius: var(--radius2);
+  border: 2px solid rgba(140,240,255,.55);
+  box-shadow:
+    0 0 0 2px rgba(10,40,70,.35) inset,
+    0 0 22px rgba(120,240,255,.25),
+    0 0 60px rgba(120,240,255,.10);
+  background: rgba(40,120,150,.10);
+}
+
+/* little UI hint area (optional) */
+.ui-hint{
+  margin-top:8px;
+  font-size:13px;
+  color: rgba(160,210,240,.75);
+  letter-spacing:.04em;
+  opacity:.9;
+}
+
+/* Generic “PS2-ish” button */
+.btn-ps2{
+  border: 2px solid rgba(140,240,255,.45);
+  background: rgba(10,40,70,.25);
+  color: rgba(240,252,255,.92);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor:pointer;
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.18) inset,
+    0 0 18px rgba(120,240,255,.18);
+}
+.btn-ps2:hover{
+  background: rgba(20,80,120,.28);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.18) inset,
+    0 0 26px rgba(120,240,255,.22);
+}
+.btn-ps2:active{
+  transform: translateY(1px);
+}

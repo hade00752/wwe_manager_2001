@@ -1,0 +1,195 @@
+era,wrestler_id,brand,alignment
+2001,1,RAW,face
+2001,2,RAW,face
+2001,3,RAW,heel
+2001,4,SmackDown,face
+2001,5,SmackDown,heel
+2001,6,RAW,face
+2001,7,RAW,face
+2001,8,SmackDown,neutral
+2001,9,RAW,neutral
+2001,10,SmackDown,neutral
+2001,11,SmackDown,heel
+2001,12,SmackDown,face
+2001,13,SmackDown,face
+2001,14,RAW,heel
+2001,15,RAW,heel
+2001,16,RAW,heel
+2001,17,RAW,heel
+2001,18,RAW,face
+2001,20,RAW,neutral
+2001,21,SmackDown,face
+2001,22,SmackDown,face
+2001,23,RAW,heel
+2001,24,RAW,heel
+2001,25,RAW,neutral
+2001,26,RAW,neutral
+2001,27,RAW,face
+2001,28,RAW,face
+2001,29,RAW,heel
+2001,30,SmackDown,face
+2001,31,SmackDown,face
+2001,32,SmackDown,heel
+2001,33,SmackDown,heel
+2001,34,RAW,face
+2001,35,SmackDown,neutral
+2001,36,SmackDown,face
+2001,37,RAW,face
+2001,40,RAW,face
+2001,41,RAW,neutral
+2001,42,SmackDown,neutral
+2001,43,RAW,heel
+2001,44,SmackDown,heel
+2001,45,RAW,face
+2001,46,RAW,face
+2001,47,RAW,heel
+2001,48,SmackDown,heel
+2001,49,RAW,heel
+2001,52,SmackDown,face
+2001,53,SmackDown,heel
+2001,56,"Free Agency",face
+2001,58,"Free Agency",face
+2001,61,"Free Agency",heel
+2001,62,"Free Agency",heel
+2001,63,"Free Agency",face
+2001,64,"Free Agency",face
+2001,65,"Free Agency",heel
+2001,66,"Free Agency",heel
+2001,67,"Free Agency",face
+2001,68,"Free Agency",neutral
+2001,69,"Free Agency",face
+2001,71,"Free Agency",face
+2001,72,"Free Agency",face
+2001,73,"Free Agency",heel
+2001,74,"Free Agency",heel
+2001,75,"Free Agency",face
+2001,76,"Free Agency",heel
+2001,77,"Free Agency",neutral
+2001,78,"Free Agency",neutral
+2001,79,"Free Agency",face
+2001,82,"Free Agency",heel
+2001,84,"Free Agency",heel
+2001,85,RAW,face
+2001,86,SmackDown,face
+2001,87,RAW,neutral
+2001,88,RAW,heel
+2001,89,SmackDown,heel
+2001,91,RAW,heel
+2001,92,RAW,face
+2001,93,SmackDown,face
+2001,94,RAW,heel
+2001,95,SmackDown,heel
+2001,96,SmackDown,face
+2001,97,RAW,neutral
+2001,98,RAW,face
+200404,99,RAW,heel
+200404,100,SD,heel
+200404,37,RAW,heel
+200404,101,RAW,heel
+200404,8,RAW,heel
+200404,28,RAW,face
+200404,52,SD,face
+200404,17,RAW,face
+200404,23,RAW,heel
+200404,102,RAW,heel
+200404,103,SD,heel
+200404,10,RAW,face
+200404,9,RAW,heel
+200404,14,RAW,heel
+200404,32,SD,heel
+200404,24,RAW,heel
+200404,104,RAW,heel
+200404,105,SD,heel
+200404,106,RAW,heel
+200404,11,SD,face
+200404,13,RAW,heel
+200404,107,SD,face
+200404,108,RAW,heel
+200404,109,RAW,heel
+200404,35,SD,heel
+200404,34,RAW,face
+200404,88,FA,neutral
+200404,110,SD,heel
+200404,111,RAW,heel
+200404,25,SD,heel
+200404,112,SD,face
+200404,113,FA,heel
+200404,114,SD,heel
+200404,7,RAW,face
+200404,5,SD,heel
+200404,48,FA,neutral
+200404,85,RAW,face
+200404,115,RAW,heel
+200404,116,RAW,heel
+200404,21,SD,heel
+200404,117,RAW,face
+200404,92,RAW,heel
+200404,73,SD,heel
+200404,118,SD,heel
+200404,119,RAW,heel
+200404,120,RAW,heel
+200404,63,SD,face
+200404,44,SD,face
+200404,121,SD,heel
+200404,18,RAW,face
+200404,30,RAW,face
+200404,122,SD,heel
+200404,123,RAW,heel
+200404,124,RAW,face
+200404,125,RAW,heel
+200404,45,SD,heel
+200404,16,RAW,heel
+200404,1,RAW,face
+200404,93,SD,face
+200404,86,RAW,face
+200404,4,SD,heel
+200404,126,RAW,heel
+200404,15,RAW,heel
+200404,2,RAW,face
+200404,3,RAW,heel
+200404,6,RAW,face
+200404,12,SD,face
+200404,20,RAW,neutral
+200404,22,SD,face
+200404,26,RAW,neutral
+200404,27,RAW,face
+200404,29,RAW,heel
+200404,31,SD,face
+200404,33,SD,heel
+200404,36,SD,face
+200404,40,RAW,face
+200404,41,RAW,neutral
+200404,42,SD,neutral
+200404,43,RAW,heel
+200404,46,RAW,face
+200404,47,RAW,heel
+200404,49,RAW,heel
+200404,53,SD,heel
+200404,56,FA,face
+200404,58,FA,face
+200404,61,FA,heel
+200404,62,FA,heel
+200404,64,FA,face
+200404,65,FA,heel
+200404,66,FA,heel
+200404,67,FA,face
+200404,68,FA,neutral
+200404,69,FA,face
+200404,71,FA,face
+200404,72,FA,face
+200404,74,FA,heel
+200404,75,FA,face
+200404,76,FA,heel
+200404,77,FA,neutral
+200404,78,FA,neutral
+200404,79,FA,face
+200404,82,FA,heel
+200404,84,FA,heel
+200404,87,RAW,neutral
+200404,89,SD,heel
+200404,91,RAW,heel
+200404,94,RAW,heel
+200404,95,SD,heel
+200404,96,SD,face
+200404,97,RAW,neutral
+200404,98,RAW,face

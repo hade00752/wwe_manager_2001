@@ -1,0 +1,348 @@
+/* public/css/vs_picker.css */
+
+.vs-overlay{
+  position:fixed; inset:0;
+  z-index:9999;
+  display:grid; place-items:center;
+
+  /* ✅ kill “ghost text” / page bleed-through */
+  background:
+    radial-gradient(1200px 700px at 30% 40%, rgba(70,120,255,.16), transparent 55%),
+    radial-gradient(1200px 700px at 70% 40%, rgba(255,70,70,.14), transparent 55%),
+    rgba(0,0,0,.92);
+
+  /* if supported, makes the underlying page unreadable even with bright UI */
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+}
+
+/* original-ish size */
+.vs-frame{
+  width:min(1100px, 94vw);
+  height:min(620px, 86vh);
+
+  display:grid;
+  grid-template-columns: 1fr 120px 1fr;
+  grid-template-rows: auto 1fr auto;
+  gap:14px;
+  padding:14px;
+
+  border-radius:18px;
+  border:3px solid rgba(140,190,255,.55);
+  box-shadow:
+    0 0 35px rgba(0,0,0,.75),
+    0 0 22px rgba(90,160,255,.32),
+    inset 0 0 18px rgba(0,0,0,.85);
+
+  /* ✅ closer to the SVR/PS2 “panel + scanline” vibe, less noisy overlay */
+  background:
+    linear-gradient(135deg, rgba(10,20,55,.92), rgba(30,0,35,.92)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 2px, transparent 6px);
+
+  position:relative;
+  overflow:hidden;
+}
+
+/* subtle hex texture layer (no “weird text” looking artifacts) */
+.vs-frame:before{
+  content:"";
+  position:absolute; inset:-40px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.05), transparent 35%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,255,.04), transparent 38%),
+    radial-gradient(circle at 40% 75%, rgba(255,255,255,.03), transparent 45%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.015) 0px, rgba(255,255,255,.015) 1px, transparent 4px, transparent 10px);
+  opacity:.35;
+  pointer-events:none;
+}
+
+/* vignette to push focus into the center (SVR-ish) */
+.vs-frame:after{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(900px 520px at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%);
+  opacity:.75;
+  pointer-events:none;
+}
+
+.vs-top{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  padding:4px 6px;
+  color:#eaf2ff;
+  text-shadow:0 0 10px rgba(0,0,0,.75);
+  z-index:1;
+}
+
+.vs-title{
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  letter-spacing:.12em;
+  font-size:18px;
+  opacity:.9;
+}
+
+.vs-hint{
+  font-family: ui-sans-serif, system-ui, Segoe UI, Arial;
+  font-size:12px;
+  opacity:.65;
+}
+
+.vs-mid{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  z-index:1;
+}
+
+.vs-vs{
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  font-size:80px;
+  letter-spacing:.05em;
+  color:rgba(190,80,255,.95);
+  text-shadow:
+    0 0 10px rgba(190,80,255,.5),
+    0 0 25px rgba(100,0,140,.85);
+}
+
+/* Radar plate */
+.vs-radar-wrap{
+  width:120px;
+  height:120px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.60);
+  display:grid;
+  place-items:center;
+}
+
+.vs-radar{
+  width:112px;
+  height:112px;
+  display:block;
+}
+
+/* ✅ IMPORTANT: let the card use all available height and fit content */
+.vs-card{
+  z-index:1;
+  border-radius:16px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+
+  border:3px solid rgba(140,190,255,.55);
+  box-shadow:
+    inset 0 0 18px rgba(0,0,0,.88),
+    0 0 14px rgba(0,0,0,.35);
+  background:
+    linear-gradient(180deg, rgba(20,35,80,.84), rgba(0,0,0,.74));
+
+  position:relative;
+
+  /* grid child sizing fix */
+  min-height: 0;
+  height: 100%;
+
+  /* no internal scrollbars */
+  overflow:hidden;
+}
+
+.vs-right{
+  border-color: rgba(255,110,110,.55);
+  background:
+    linear-gradient(180deg, rgba(90,18,18,.80), rgba(0,0,0,.74));
+}
+
+/* thick coloured side borders */
+.vs-left:before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0;
+  width:10px;
+  background: linear-gradient(180deg, rgba(120,180,255,.90), rgba(120,180,255,.10));
+  box-shadow: 0 0 18px rgba(120,180,255,.35);
+  pointer-events:none;
+  opacity:.95;
+}
+.vs-right:before{
+  content:"";
+  position:absolute; right:0; top:0; bottom:0;
+  width:10px;
+  background: linear-gradient(180deg, rgba(255,110,110,.88), rgba(255,110,110,.10));
+  box-shadow: 0 0 18px rgba(255,110,110,.32);
+  pointer-events:none;
+  opacity:.95;
+}
+
+.vs-tag{
+  display:inline-block;
+  width:max-content;
+  padding:3px 8px;
+  border-radius:10px;
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  font-size:14px;
+  letter-spacing:.08em;
+  border:2px solid rgba(255,255,255,.22);
+  background: rgba(0,0,0,.55);
+  box-shadow: inset 0 0 10px rgba(0,0,0,.7);
+}
+.vs-tag.blue{ color:#78b7ff; }
+.vs-tag.red { color:#ff7d7d; }
+
+.vs-dd{
+  width: 100%;
+  margin: 4px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.38);
+  color: rgba(255,255,255,.92);
+  box-shadow: inset 0 0 14px rgba(0,0,0,.50);
+  outline: none;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+.vs-dd:disabled{ opacity:.55; cursor:not-allowed; }
+.vs-dd option{
+  background:#0b0f18;
+  color:rgba(255,255,255,.92);
+  font-weight:700;
+}
+
+/* ✅ reduced so stats fit without clipping */
+.vs-portrait{
+  width:100%;
+  height:240px;
+  object-fit:cover;
+  border-radius:12px;
+  border:2px solid rgba(255,255,255,.16);
+  filter: contrast(1.12) saturate(1.18);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.65);
+}
+
+.vs-fallback{
+  display:grid;
+  place-items:center;
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  font-size:56px;
+  color:rgba(255,255,255,.85);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.06), rgba(0,0,0,.35));
+}
+
+.vs-name{
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  font-size:36px;
+  letter-spacing:.02em;
+  color:#fff;
+  text-shadow: 0 0 12px rgba(0,0,0,.78);
+}
+
+.vs-champ{
+  font-family: ui-sans-serif, system-ui, Segoe UI, Arial;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  width:max-content;
+  background: rgba(0,0,0,.45);
+}
+.vs-champ.blue{ color:#a8cfff; }
+.vs-champ.red { color:#ffb0b0; }
+.vs-champ.muted{ opacity:.55; }
+
+.vs-stats{
+  display:grid;
+  gap:6px;
+  margin-top:0;
+}
+
+.vs-stat{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.35);
+  font-family: ui-sans-serif, system-ui, Segoe UI, Arial;
+  font-size:12px;
+  letter-spacing:.06em;
+}
+.vs-stat .k{ opacity:.70; }
+.vs-stat .v{ font-weight:900; }
+.vs-stat .v.blue{ color:#89c2ff; }
+.vs-stat .v.red { color:#ff8f8f; }
+
+.vs-meter{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:auto;
+  opacity:.92;
+  padding-bottom: 2px;
+}
+
+.vs-meter .m-lab{
+  font-family: ui-sans-serif, system-ui, Segoe UI, Arial;
+  font-size:11px;
+  letter-spacing:.08em;
+  opacity:.65;
+}
+
+.vs-meter .m-bar{
+  flex:1;
+  height:10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.45);
+  overflow:hidden;
+}
+
+.vs-meter .m-fill{
+  height:100%;
+  border-radius:999px;
+  opacity:.9;
+}
+.vs-meter .m-fill.blue{ background: rgba(120,180,255,.85); }
+.vs-meter .m-fill.red { background: rgba(255,110,110,.85); }
+
+.vs-bottom{
+  grid-column:1 / -1;
+  z-index:1;
+}
+
+.vs-nav{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+.vs-btn{
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  letter-spacing:.08em;
+  padding:10px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  border:2px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.35);
+  color:#eaf2ff;
+  box-shadow: inset 0 0 10px rgba(0,0,0,.7);
+}
+.vs-btn:hover{ filter: brightness(1.12); }
+
+.vs-confirm{
+  border-color: rgba(120,180,255,.35);
+  box-shadow:
+    inset 0 0 10px rgba(0,0,0,.7),
+    0 0 14px rgba(120,180,255,.18);
+}

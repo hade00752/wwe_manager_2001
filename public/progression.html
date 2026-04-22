@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Progression — WWF GM</title>
+
+  <!-- your global stylesheet -->
+  <link rel="stylesheet" href="/styles.css" />
+
+  <!-- page-only styles (safe to keep here or move into styles.css) -->
+  <style>
+    /* --- Progression page --- */
+    .prog-controls{ margin: 12px 0 18px; display:grid; gap:12px; }
+    .prog-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+    .prog-field{ display:grid; gap:6px; min-width: 220px; }
+    .prog-field.grow{ flex: 1 1 auto; min-width: 320px; }
+    .prog-lbl{ font-size:12px; color: rgba(255,255,255,.68); }
+    .prog-weeklbl{ font-size:12px; color: rgba(255,255,255,.78); margin-top:6px; }
+
+    .prog-attrs{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px 12px; }
+    @media (max-width: 900px){ .prog-attrs{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .prog-attr{ display:flex; gap:8px; align-items:center; font-size:13px; color: rgba(255,255,255,.84); }
+    .prog-attr input{ transform: translateY(1px); }
+
+    .prog-grid{ display:grid; grid-template-columns: 1.4fr .6fr; gap:16px; }
+    @media (max-width: 900px){ .prog-grid{ grid-template-columns: 1fr; } }
+
+    .prog-panel{ padding:12px; border-radius:12px; background: rgba(255,255,255,.02); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+
+    /* VS header */
+    .prog-vs{
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items:center;
+      margin: 10px 0 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.02);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
+    }
+    .prog-vs-side{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .prog-vs-side.right{ justify-content:flex-end; text-align:right; }
+    .prog-vs-img{
+      width: 76px; height: 76px;
+      border-radius: 16px;
+      overflow:hidden;
+      background: rgba(0,0,0,.20);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.10) inset;
+      flex: 0 0 auto;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .prog-vs-img img{
+      width:100%; height:100%;
+      object-fit: cover;
+      display:block;
+    }
+    .prog-vs-meta{ min-width:0; }
+    .prog-vs-name{
+      font-size: 22px;
+      font-weight: 800;
+      color: rgba(255,255,255,.92);
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .prog-vs-sub{
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(255,255,255,.68);
+    }
+    .prog-vs-mid{
+      text-align:center;
+      padding: 0 6px;
+      user-select:none;
+    }
+    .prog-vs-mid .vs{
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      color: rgba(255,255,255,.78);
+    }
+    .prog-vs-mid .hint{
+      margin-top: 3px;
+      font-size: 12px;
+      color: rgba(255,255,255,.55);
+    }
+
+    /* A/B color system */
+    :root{
+      --a-color: rgba(78, 220, 140, .95);   /* green */
+      --b-color: rgba(255, 92, 92, .95);    /* red */
+      --a-ring: rgba(78, 220, 140, .55);
+      --b-ring: rgba(255, 92, 92, .55);
+    }
+    .prog-vs-side.a .prog-vs-img{ box-shadow: 0 0 0 2px var(--a-ring), 0 0 0 1px rgba(255,255,255,.10) inset; }
+    .prog-vs-side.b .prog-vs-img{ box-shadow: 0 0 0 2px var(--b-ring), 0 0 0 1px rgba(255,255,255,.10) inset; }
+
+    /* Chart */
+    .prog-chart{ width:100%; height:auto; display:block; border-radius:10px; background: rgba(0,0,0,.16); }
+    .prog-chart .grid{ stroke: rgba(255,255,255,.08); stroke-width:1; }
+    .prog-chart .axisText{ fill: rgba(255,255,255,.55); font-size: 12px; }
+
+    .prog-chart .line{ fill:none; stroke-width:2.25; opacity:.55; }
+    .prog-chart .lineA{ stroke: var(--a-color); opacity:.62; }
+    .prog-chart .lineB{ stroke: var(--b-color); stroke-dasharray: 6 5; opacity:.58; }
+
+    .prog-chart .pt{ opacity:.88; cursor:pointer; }
+    .prog-chart .ptA{ fill: var(--a-color); }
+    .prog-chart .ptB{ fill: var(--b-color); }
+
+    .prog-chart .attr-0 .line{ opacity:.62; }
+    .prog-chart .attr-1 .line{ opacity:.54; }
+    .prog-chart .attr-2 .line{ opacity:.48; }
+    .prog-chart .attr-3 .line{ opacity:.42; }
+    .prog-chart .attr-4 .line{ opacity:.36; }
+    .prog-chart .attr-5 .line{ opacity:.32; }
+
+    .prog-legend{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .prog-legend .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.10) inset;
+    }
+    .prog-legend .pill.a{ box-shadow: 0 0 0 1px var(--a-ring) inset; }
+    .prog-legend .pill.b{ box-shadow: 0 0 0 1px var(--b-ring) inset; }
+    .prog-legend .dot{
+      width:10px; height:10px; border-radius: 99px; display:inline-block;
+    }
+    .prog-legend .dot.a{ background: var(--a-color); }
+    .prog-legend .dot.b{ background: var(--b-color); }
+
+    /* Ledger */
+    .prog-ledger-title{ font-weight:700; margin-bottom:10px; color: rgba(255,255,255,.90); }
+    .prog-ledger-attr{ margin-top:10px; font-weight:600; color: rgba(255,255,255,.86); }
+    .prog-ledger-item{ display:flex; gap:10px; padding:4px 0; color: rgba(255,255,255,.76); font-size:13px; }
+    .prog-ledger-d{ min-width:48px; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.92); }
+    .prog-ledger-why{ white-space:pre-wrap; }
+    .prog-hr{ border:none; border-top:1px solid rgba(255,255,255,.10); margin:14px 0; }
+  </style>
+</head>
+
+<body>
+  <main id="prog-root"></main>
+
+  <!-- global nav injection -->
+  <script type="module" src="/js/nav.js"></script>
+
+  <!-- page logic -->
+  <script type="module" src="/js/progression_page.js"></script>
+</body>
+</html>
